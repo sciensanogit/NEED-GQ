@@ -1,3 +1,20 @@
+#' Retrieve Metadata for a Specific Output
+#'
+#' This function extracts and returns metadata for a given output ID (e.g., a table or figure)
+#' from a centralized output index. It is useful for programmatically accessing information
+#' about outputs used in a project.
+#'
+#' @param id A character string representing the unique identifier of the output.
+#'   This ID must exist in the output index.
+#'
+#' @return A named list containing:
+#' \describe{
+#'   \item{id}{The ID of the output.}
+#'   \item{name}{The file name associated with the output.}
+#'   \item{type}{The type of output, such as "table" or "figure".}
+#'   \item{caption}{The caption or description of the output.}
+#'   \item{path}{The full path to the corresponding R script file.}
+#' }
 get_info <- function(id) {
   # Load the output index
   index <- readRDS(here::here("data/output_index/output_index.rds"))
