@@ -38,3 +38,9 @@ The `results` directory contains output files such as figures, organized into:
 - `tables`: contains generated tables
 
 The `templates` directory contains templates for R files for new figures and tables.
+
+## TO DO
+
+- [ ] Fix the import script for raw data in NL
+- [ ] Fix the import script for raw data in EN
+- [ ] Correct the import of the EQ5D-5L data
