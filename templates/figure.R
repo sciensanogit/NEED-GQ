@@ -10,7 +10,6 @@
 
 library(tidyverse)
 library(glue)
-library(ggtext)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)
