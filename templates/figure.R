@@ -10,6 +10,7 @@
 
 library(tidyverse)
 library(glue)
+library(labelled)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)

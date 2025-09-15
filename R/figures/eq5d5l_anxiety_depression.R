@@ -1,19 +1,17 @@
-#' Name         : eq5d5l_pain_discomfort.R
+#' Name         : eq5d5l_anxiety_depression.R
 #' Author       : Alexandre Bohyn
-#' Date         : September 12, 2025
-#' Purpose      : Create a bar chart of EQ-5D-5L pain/discomfort dimension before the
-#'               onset of first symptoms and today.
-#'               Also creates a version as a Sankey diagram.
-#' Files created: - `results/figures/png/eq5d5l_pain_discomfort.png`
-#'                - `results/figures/pptx/eq5d5l_pain_discomfort.pptx`
-#'                - `results/figures/pptx/eq5d5l_pain_discomfort_sankey.png`
-#'                - `results/figures/pptx/eq5d5l_pain_discomfort_sankey.pptx`
+#' Date         : September 15, 2025
+#' Purpose      : Create a facetted bar plot of EQ-5D-5L anxiety/depression score before the
+#'                onset of first symptoms and today.
+#' Files created: - `results/figures/png/eq5d5l_anxiety_depression.png`
+#'                - `results/figures/pptx/eq5d5l_anxiety_depression.pptx`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
 
 library(tidyverse)
 library(glue)
+library(labelled)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)
@@ -25,19 +23,19 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset patients that finished the survey and EQ-5D-5L questions and pivot to long
 # format and label the time points
-df_long <- pivot_eq5d5l_data(data, "H4", "H10")
+df_long <- pivot_eq5d5l_data(data, "H5", "H11")
 
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Changes in self-reported level of problems with pain/discomfort of the EQ-5D-5L before onset of first symptoms and today (N={n_distinct(df_long$id)})"
+  "Changes in self-reported level of problems with anxiety/depression of the EQ-5D-5L before onset of first symptoms and today (N={n_distinct(df_long$id)})"
 )
 
 # Create the figure --------------------------------------------------------
 
 fig <- plot_eq5d5l(
   data = df_long,
-  category_name = "Pain or discomfort level",
+  category_name = "Anxiety or depression level",
   caption = caption
 )
 
@@ -49,18 +47,16 @@ fig_sankey <- plot_eq5d5l_sankey(data = df_long, caption = caption)
 
 # Save to png
 ggsave(
-  filename = "results/figures/png/eq5d5l_pain_discomfort.png",
+  filename = "results/figures/png/eq5d5l_anxiety_depression.png",
   plot = fig,
   width = 5,
-  height = 6,
-  dpi = 300
+  height = 6
 )
 ggsave(
-  filename = "results/figures/png/eq5d5l_pain_discomfort_sankey.png",
+  filename = "results/figures/png/eq5d5l_anxiety_depression_sankey.png",
   plot = fig_sankey,
   width = 5,
-  height = 7,
-  dpi = 300
+  height = 7
 )
 
 # Save to powerpoint
@@ -68,13 +64,13 @@ create_pptx(
   ggobj = fig,
   width = 5,
   height = 6,
-  path = "results/figures/pptx/eq5d5l_pain_discomfort.pptx",
+  path = "results/figures/pptx/eq5d5l_anxiety_depression.pptx",
   overwrite = TRUE
 )
 create_pptx(
   ggobj = fig_sankey,
   width = 5,
   height = 7,
-  path = "results/figures/pptx/eq5d5l_pain_discomfort_sankey.pptx",
+  path = "results/figures/pptx/eq5d5l_anxiety_depression_sankey.pptx",
   overwrite = TRUE
 )
