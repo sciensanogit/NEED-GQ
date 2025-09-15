@@ -46,10 +46,10 @@ The `templates` directory contains templates for R files for new figures and tab
 -   [x] reported_comorbidities
 -   [x] physical_symptoms_burden
 -   [x] eq5d5l_pain_discomfort
--   [ ] psychological_symptoms_burden
--   [ ] eq5d5l_anxiety_depression
--   [ ] eq5d5l_mobility
--   [ ] eq5d5l_self_care
+-   [x] psychological_symptoms_burden
+-   [x] eq5d5l_anxiety_depression
+-   [x] eq5d5l_mobility
+-   [x] eq5d5l_self_care
 -   [ ] eq5d5l_usual_activities
 -   [ ] sexual_reproductive_health
 -   [ ] side_effects_burden
