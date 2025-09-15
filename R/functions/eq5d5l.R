@@ -3,23 +3,30 @@ library(ggalluvial) |> suppressMessages()
 
 plot_eq5d5l <- function(data, category_name = NULL, caption = NULL) {
   data |>
-    ggplot(aes(x = timepoint, fill = value)) +
-    geom_bar(position = "fill") +
+    count(timepoint, value) |>
+    add_count(timepoint, wt = n, name = "total") |>
+    mutate(
+      perc = n / total,
+      label = scales::percent(perc, accuracy = 1, trim = F)
+    ) |>
+    ggplot(aes(x = timepoint, y = n, fill = value)) +
+    geom_bar(position = position_stack(), stat = "identity") +
+    geom_text(
+      aes(label = label),
+      position = position_stack(vjust = 0.5),
+      size = 4
+    ) +
     labs(
       title = str_wrap(caption, width = 35),
       x = "",
-      y = "Proportion of patients",
+      y = "Number of patients",
       fill = category_name
     ) +
     see::scale_fill_material() +
-    scale_y_continuous(
-      labels = scales::percent_format(accuracy = 1),
-      breaks = scales::breaks_width(width = 0.2)
-    ) +
     theme_kce() +
     theme(
-      panel.grid.major.x = element_line(colour = "lightgray"),
-      legend.position = "bottom"
+      legend.position = "bottom",
+      axis.ticks.x = element_blank(),
     ) +
     guides(
       fill = guide_legend(title.position = "top", title.hjust = 0, nrow = 2)
