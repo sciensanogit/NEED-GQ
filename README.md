@@ -50,7 +50,7 @@ The `templates` directory contains templates for R files for new figures and tab
 -   [x] eq5d5l_anxiety_depression
 -   [x] eq5d5l_mobility
 -   [x] eq5d5l_self_care
--   [ ] eq5d5l_usual_activities
+-   [x] eq5d5l_usual_activities
 -   [ ] sexual_reproductive_health
 -   [ ] side_effects_burden
 -   [ ] care_organization_experience
