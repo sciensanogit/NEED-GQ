@@ -51,18 +51,18 @@ The `templates` directory contains templates for R files for new figures and tab
 -   [x] eq5d5l_mobility
 -   [x] eq5d5l_self_care
 -   [x] eq5d5l_usual_activities
--   [ ] sexual_reproductive_health
--   [ ] side_effects_burden
+-   [x] sexual_reproductive_health
+-   [ ] *side_effects_burden (might be similar to psychological_symptoms_burden ?)*
 -   [ ] care_organization_experience
 -   [ ] hcp_information_satisfaction
 -   [ ] treatment_choice_involvement
 -   [ ] treatment_timing
 -   [ ] forgone_care_causes
 -   [ ] unmet_social_support
--   [ ] impact_personal_relations
--   [ ] impact_education
--   [ ] impact_work
--   [ ] impact_financial_situation
+-   [x] impact_personal_relations
+-   [x] impact_education
+-   [x] impact_work
+-   [x] impact_financial_situation
 -   [ ] priority_need_categories
 
 ### Tables
