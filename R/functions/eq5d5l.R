@@ -45,12 +45,12 @@ plot_eq5d5l_sankey <- function(data, caption = NULL) {
     )) +
     ggalluvial::geom_flow(stat = "alluvium", lode.guidance = "frontback") +
     ggalluvial::geom_stratum() +
-    geom_label(stat = "stratum", size = 3, fill = "white") +
-    see::scale_fill_material() +
+    # geom_label(stat = "stratum", size = 3, fill = "white") +
+    see::scale_fill_material(name = "Level") +
+    scale_x_discrete(expand = expansion(mult = 0.3)) +
     theme_void(14) +
     theme(
-      axis.text.x = element_text(margin = margin(2, 2, 2, 2)),
-      legend.position = "none",
+      axis.text.x = element_text(margin = margin(3, 3, 3, 3)),
       plot.title = element_text(
         face = "bold",
         size = rel(16 / 14),
@@ -58,6 +58,7 @@ plot_eq5d5l_sankey <- function(data, caption = NULL) {
         vjust = 1,
         margin = margin(t = 5, b = 7, l = 5, r = 5)
       ),
+      legend.box.margin = margin(0, 15, 0, 0)
     ) +
     ggtitle(str_wrap(caption, width = 40))
 }
