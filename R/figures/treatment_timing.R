@@ -70,7 +70,20 @@ df_diag$answer <- factor(
 ## First symptoms
 df_symp <- df |>
   select(id, answer = DSHC1) |>
-  mutate(answer = to_factor(answer)) |>
+  mutate(
+    answer = remove_val_labels(answer) |>
+      factor(
+        levels = c(6, 1:5),
+        labels = c(
+          "I don't know",
+          "< 1 month",
+          "1-6 months",
+          "6-12 months",
+          "1-2 years",
+          "> 2 years"
+        )
+      )
+  ) |>
   filter(!is.na(answer)) |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
@@ -83,7 +96,20 @@ df_symp <- df |>
 ## First healthcare contact
 df_hc <- df |>
   select(id, answer = HC1) |>
-  mutate(answer = to_factor(answer)) |>
+  mutate(
+    answer = remove_val_labels(answer) |>
+      factor(
+        levels = c(6, 1:5),
+        labels = c(
+          "I don't know",
+          "< 1 month",
+          "1-6 months",
+          "6-12 months",
+          "1-2 years",
+          "> 2 years"
+        )
+      )
+  ) |>
   filter(!is.na(answer)) |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
@@ -121,7 +147,18 @@ fig_diag <- df_diag |>
   ) +
   labs(title = str_wrap(caption_diag, 60), x = NULL) +
   theme_kce() +
-  see::scale_fill_material() +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#9e9e9e",
+      "< 6 months" = "#4caf50",
+      "6m-2y" = "#8bc34a",
+      "2-5 years" = "#cddc39",
+      "5-10 years" = "#ffeb3b",
+      "10-20 years" = "#ffc107",
+      ">20 years" = "#ff9800"
+    )
+  ) +
   theme(legend.position = "none") +
   guides(fill = guide_legend(nrow = 4))
 
@@ -136,7 +173,17 @@ fig_symp <- df_symp |>
   ) +
   labs(title = str_wrap(caption_symp, 60), x = NULL) +
   theme_kce() +
-  see::scale_fill_material() +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#9e9e9e",
+      "< 1 month" = "#4caf50",
+      "1-6 months" = "#8bc34a",
+      "6-12 months" = "#cddc39",
+      "1-2 years" = "#ffeb3b",
+      "> 2 years" = "#ffc107"
+    )
+  ) +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1)
@@ -153,14 +200,24 @@ fig_hc <- df_hc |>
   ) +
   labs(title = str_wrap(caption_hc, 60), x = NULL) +
   theme_kce() +
-  see::scale_fill_material() +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#9e9e9e",
+      "< 1 month" = "#4caf50",
+      "1-6 months" = "#8bc34a",
+      "6-12 months" = "#cddc39",
+      "1-2 years" = "#ffeb3b",
+      "> 2 years" = "#ffc107"
+    )
+  ) +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
 # Combine the three plots into one
-fig <- fig_diag / fig_symp / fig_hc
+fig <- fig_symp / fig_hc
 
 # Export it ---------------------------------------------------------------
 
@@ -169,7 +226,14 @@ ggsave(
   filename = "results/figures/png/treatment_timing.png",
   plot = fig,
   width = 8,
-  height = 18,
+  height = 12,
+  dpi = 300
+)
+ggsave(
+  filename = "results/figures/png/treatment_timing_diag.png",
+  plot = fig_diag,
+  width = 8,
+  height = 6,
   dpi = 300
 )
 
@@ -177,7 +241,14 @@ ggsave(
 create_pptx(
   ggobj = fig,
   width = 8,
-  height = 18,
+  height = 12,
   path = "results/figures/pptx/treatment_timing.pptx",
+  overwrite = TRUE
+)
+create_pptx(
+  ggobj = fig_diag,
+  width = 8,
+  height = 6,
+  path = "results/figures/pptx/treatment_timing_diag.pptx",
   overwrite = TRUE
 )

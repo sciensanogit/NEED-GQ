@@ -19,6 +19,7 @@ create_pptx <- function(
   }
 
   out %>%
+    officer::layout_default("Title and Content") %>%
     officer::add_slide() %>%
     officer::ph_with(
       rvg::dml(ggobj = ggobj),

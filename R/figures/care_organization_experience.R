@@ -42,7 +42,20 @@ df_long <- df |>
     values_to = "answer"
   ) |>
   left_join(labs, by = "variable") |>
-  mutate(answer = to_factor(answer))
+  mutate(
+    answer = remove_val_labels(answer) |>
+      factor(
+        levels = c(6, 1:5),
+        labels = c(
+          "I don't know",
+          "Always",
+          "Often",
+          "Sometimes",
+          "Rarely",
+          "Never"
+        )
+      )
+  )
 
 # Count the answers by variable
 df_count <- df_long |>
@@ -52,7 +65,7 @@ df_count <- df_long |>
     total = sum(n),
     perc = n / total,
     perc_label = scales::percent(perc, accuracy = 1),
-    text = glue("{perc_label}")
+    text = glue("{n} ({perc_label})")
   )
 
 # Define caption -----------------------------------------------------------------
@@ -74,15 +87,28 @@ fig <- df_count |>
   ) +
   labs(
     title = str_wrap(caption, width = 35),
-    x = "",
-    y = "Number of patients",
+    x = NULL,
+    y = NULL,
     fill = "Answer"
   ) +
-  see::scale_fill_material() +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "Always" = "#2196F3",
+      "Often" = "#8BC34A",
+      "Sometimes" = "#FFC107",
+      "Rarely" = "#FF9800",
+      "Never" = "#F44336"
+    )
+  ) +
   theme_kce() +
   theme(
     legend.position = "bottom",
-    axis.ticks.x = element_blank()
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_blank(),
   ) +
   guides(
     fill = guide_legend(title.position = "top", title.hjust = 0, nrow = 2)

@@ -33,28 +33,13 @@ caption <- glue(
   "Changes in self-reported level of problems with pain/discomfort of the EQ-5D-5L before onset of first symptoms and today (N={n_distinct(df_long$id)})"
 )
 
-# Create the figure --------------------------------------------------------
-
-fig <- plot_eq5d5l(
-  data = df_long,
-  category_name = "Pain or discomfort level",
-  caption = caption
-)
-
 # Create the Sankey plot ---------------------------------------------------------
 
-fig_sankey <- plot_eq5d5l_sankey(data = df_long, caption = caption)
+(fig_sankey <- plot_eq5d5l_sankey(data = df_long, caption = caption))
 
 # Export it ---------------------------------------------------------------
 
 # Save to png
-ggsave(
-  filename = "results/figures/png/eq5d5l_pain_discomfort.png",
-  plot = fig,
-  width = 5,
-  height = 6,
-  dpi = 300
-)
 ggsave(
   filename = "results/figures/png/eq5d5l_pain_discomfort_sankey.png",
   plot = fig_sankey,
@@ -64,13 +49,6 @@ ggsave(
 )
 
 # Save to powerpoint
-create_pptx(
-  ggobj = fig,
-  width = 5,
-  height = 6,
-  path = "results/figures/pptx/eq5d5l_pain_discomfort.pptx",
-  overwrite = TRUE
-)
 create_pptx(
   ggobj = fig_sankey,
   width = 5,

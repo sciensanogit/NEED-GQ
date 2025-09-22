@@ -37,28 +37,57 @@ df_long <- df |>
     values_to = "response"
   ) |>
   left_join(labs, by = c("question" = "variable")) |>
-  mutate(response = to_factor(response)) |>
-  filter(!is.na(response))
+  mutate(
+    response = remove_val_labels(response) |>
+      factor(
+        levels = c(7, 1:6),
+        labels = c(
+          "I don't know",
+          "I didn't get this symptom",
+          "Not at all bothersome",
+          "Slightly bothersome",
+          "Moderately bothersome",
+          "Very bothersome",
+          "Extremely bothersome"
+        )
+      )
+  ) |>
+  filter(!is.na(response)) |>
+  mutate(
+    n_ordering = sum(as.numeric(response) %in% c(6, 7)),
+    .by = c(label)
+  )
 
 n_total <- n_distinct(df_long$id)
 
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Frequency, distribution and level of burden of psychological symptoms reported by respondents (N={n_total}). Participants could select multiple options; values represent the number of responses, not individual participants."
+  "Frequency, distribution and level of burden of psychological symptoms reported by respondents (N={n_total})."
 )
 
 # Create the figure --------------------------------------------------------
 
 (fig <- df_long |>
-  count(label, response) |>
-  ggplot(aes(x = n, y = label, fill = response)) +
+  count(label, n_ordering, response) |>
+  ggplot(aes(x = n, y = reorder(label, n_ordering), fill = response)) +
   geom_col(position = "stack") +
   scale_x_continuous(
     breaks = scales::breaks_width(width = 10),
     expand = expansion(mult = c(0, 0))
   ) +
-  see::scale_fill_material(name = "", na.translate = F) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "I didn't get this symptom" = "#2196F3",
+      "Not at all bothersome" = "#4CAF50",
+      "Slightly bothersome" = "#8BC34A",
+      "Moderately bothersome" = "#FFC107",
+      "Very bothersome" = "#FF9800",
+      "Extremely bothersome" = "#F44336"
+    )
+  ) +
   scale_y_discrete(
     labels = function(x) str_wrap(x, width = 50) # Wrap long labels
   ) +

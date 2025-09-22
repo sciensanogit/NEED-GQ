@@ -55,7 +55,7 @@ n_total <- nrow(df)
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Frequency, distribution and level of burden of physical symptoms reported by respondents (N={n_total}). Participants could select multiple options; values represent the number of responses, not individual participants."
+  "Frequency, distribution and level of burden of physical symptoms reported by respondents (N={n_total})"
 )
 
 # Create the figure --------------------------------------------------------

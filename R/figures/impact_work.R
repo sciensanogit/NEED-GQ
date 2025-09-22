@@ -30,7 +30,16 @@ df <- data |>
   select(id, S2, S3, S3b) |>
   # Redefine categories for the number of years not working (S3b)
   mutate(
-    S2 = to_factor(S2),
+    S2 = remove_val_labels(S2) |>
+      factor(
+        levels = c(4, 1:3),
+        labels = c(
+          "I don't know",
+          "Work less",
+          "Stopped working",
+          "No impact"
+        )
+      ),
     S3b = ifelse(S3b > 100, NA, S3b), # Exclude abnormal values
     S3b_binned = cut(
       S3b,
@@ -55,11 +64,14 @@ levels_s3b <- levels_s3b[!is.na(levels_s3b)]
 df$answer <- factor(
   df$answer,
   levels = c(
+    "I don't know",
     "< 1 month",
     "1-3 months",
     "4-12 months",
-    levels_s3b,
-    "I don't know"
+    "1-5 years",
+    "6-10 years",
+    "11-20 years",
+    ">20 years"
   )
 )
 
@@ -95,24 +107,28 @@ caption <- glue("Impact of the psychosis disorder on work.")
 caption_s2 <- glue("Global impact (N={unique(df_s2$total)})")
 
 # Figure for question S2
-(fig1 <- df_s2 |>
+fig1 <- df_s2 |>
   ggplot(aes(x = S2, y = n, fill = S2)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = label), vjust = -0.5, size = 5) +
+  geom_text(aes(label = label), vjust = -0.5, size = 4) +
   scale_y_continuous(
     name = "Number of patients",
     expand = expansion(mult = c(0, 0.3))
   ) +
-  labs(title = caption, subtitle = str_wrap(caption_s2, 70)) +
+  labs(title = caption, subtitle = str_wrap(caption_s2, 70), x = NULL) +
   theme_kce() +
-  see::scale_fill_material(name = NULL) +
-  theme(
-    legend.position = "bottom",
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    axis.title.x = element_blank()
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "Work less" = "#FFC107",
+      "Stopped working" = "#F44336",
+      "No impact" = "#4CAF50"
+    )
   ) +
-  guides(fill = guide_legend(nrow = 4)))
+  theme(
+    legend.position = "none"
+  )
 
 # Caption for question S3
 caption_s3 <- glue(
@@ -123,20 +139,49 @@ caption_s3 <- glue(
 (fig2 <- df_s3 |>
   ggplot(aes(x = answer, y = n, fill = answer)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = label), vjust = -0.5, size = 5) +
+  geom_text(aes(label = label), vjust = -0.5, size = 4) +
   scale_y_continuous(
     name = "Number of patients",
     expand = expansion(mult = c(0, 0.3))
   ) +
   labs(title = caption, subtitle = str_wrap(caption_s3, 70), x = NULL) +
   theme_kce() +
-  see::scale_fill_material() +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "< 1 month" = "#4CAF50",
+      "1-3 months" = "#8BC34A",
+      "4-12 months" = "#FFC107",
+      "1-5 years" = "#FF9800",
+      "6-10 years" = "#FF5722",
+      "11-20 years" = "#F4511E",
+      ">20 years" = "#E64A19"
+    )
+  ) +
   theme(legend.position = "none") +
   guides(fill = guide_legend(nrow = 4)))
+
+# Combine the two figures
+fig <- (fig1 +
+  labs(title = NULL) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))) +
+  (fig2 +
+    labs(title = NULL) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))) +
+  plot_layout(widths = c(1, 1.2)) +
+  plot_annotation(title = caption, theme = theme_kce(font_size = 16))
 
 # Export it ---------------------------------------------------------------
 
 # Save to png
+ggsave(
+  filename = "results/figures/png/impact_work.png",
+  plot = fig,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
 ggsave(
   filename = "results/figures/png/impact_work_s2.png",
   plot = fig1,
@@ -156,6 +201,11 @@ ggsave(
 create_pptx(
   ggobj = fig1,
   path = "results/figures/pptx/impact_work_s2.pptx",
+  overwrite = TRUE
+)
+create_pptx(
+  ggobj = fig,
+  path = "results/figures/pptx/impact_work.pptx",
   overwrite = TRUE
 )
 create_pptx(

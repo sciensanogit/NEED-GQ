@@ -52,22 +52,65 @@ caption <- glue(
 
 # Create the figure --------------------------------------------------------
 
-fig <- df_long |>
+# Test for difference in distribution
+wilcox_test <- wilcox.test(
+  health_score ~ timepoint,
+  data = df_long,
+)
+
+# Summary statistics data frame
+summ_df <- df_long |>
+  group_by(timepoint) |>
+  summarise(
+    median = median(health_score, na.rm = TRUE),
+    p25 = quantile(health_score, 0.25, na.rm = TRUE),
+    p75 = quantile(health_score, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(
+    cols = -timepoint,
+    names_to = "statistic",
+    values_to = "value"
+  ) |>
+  mutate(
+    statistic = case_when(
+      statistic == "median" ~ "Median",
+      statistic == "p25" ~ "Q1",
+      statistic == "p75" ~ "Q3"
+    ),
+    label = glue("{statistic}: {value}") |>
+      str_pad(10, side = "left", pad = " ")
+  )
+
+# Figure
+(fig <- df_long |>
   filter(!is.na(health_score)) |>
   ggplot(aes(x = timepoint, y = health_score)) +
-  geom_boxplot(aes(fill = timepoint), width = 0.6, outlier.shape = NA) +
+  geom_boxplot(aes(fill = timepoint), width = 0.3, outlier.shape = NA) +
   geom_point(position = position_jitter(width = 0.01)) +
   see::scale_fill_material_d(
     na.translate = FALSE
   ) +
+  geom_text(
+    data = summ_df,
+    aes(x = timepoint, y = value, label = label),
+    inherit.aes = FALSE,
+    size = 4.5,
+    vjust = 0.5,
+    hjust = -1,
+    nudge_x = -0.1
+  ) +
   labs(
     title = str_wrap(caption, width = 70),
     x = "",
-    y = "Health Score"
+    y = "Health Score",
+    caption = glue(
+      "Wilcoxon signed-rank test: {scales::pvalue(wilcox_test$p.value, add_p = T)}"
+    )
   ) +
   theme_kce(font_size = 14) +
   theme(legend.position = "bottom") +
-  guides(fill = "none")
+  guides(fill = "none"))
 
 # Export it ---------------------------------------------------------------
 

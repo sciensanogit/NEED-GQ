@@ -7,7 +7,8 @@
 #'              (French version)
 #' Files created: - `results/figures/png/impact_sexual_reproductive_health.png`
 #'                - `results/figures/pptx/impact_sexual_reproductive_health.pptx`
-#' Edits        :
+#' Edits        : - Sep 19: Add "I don't know" and "NA" as answers in gray at the left
+#'                  of the plot
 
 # Packages ----------------------------------------------------------------
 
@@ -36,7 +37,6 @@ df_long <- df |>
     names_to = "question",
     values_to = "answer"
   ) |>
-  filter(!answer %in% c(6, 7) & !is.na(answer)) |>
   mutate(
     question = recode(
       question,
@@ -45,20 +45,23 @@ df_long <- df |>
     ),
     answer = factor(
       answer,
-      levels = c(1:5, 8),
+      levels = c(6, 7, 8, 1:5),
       labels = c(
+        "I don't know",
+        "Not applicable",
+        "I don't want to answer",
         "Not at all",
         "Slightly",
         "Moderately",
         "A lot",
-        "Extremely",
-        "I don't want to answer"
+        "Extremely"
       )
     )
   )
 
 # Make into a count table
 df_count <- df_long |>
+  filter(!is.na(answer)) |>
   count(question, answer) |>
   group_by(question) |>
   add_count(name = "total", wt = n) |>
@@ -78,10 +81,10 @@ caption <- glue(
 
 # Create the figure --------------------------------------------------------
 
-fig <- df_count |>
+(fig <- df_count |>
   ggplot(aes(x = answer, y = n, fill = answer)) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = label), vjust = -0.5, size = 5) +
+  geom_text(aes(label = label), vjust = -0.5, size = 4) +
   scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
   facet_wrap(~question) +
   labs(
@@ -90,12 +93,24 @@ fig <- df_count |>
     y = "Number of patients"
   ) +
   theme_kce(font_size = 16) +
-  see::scale_fill_material() +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "Not applicable" = "#B0BEC5",
+      "I don't want to answer" = "#B0BEC5",
+      "Not at all" = "#2196F3",
+      "Slightly" = "#8BC34A",
+      "Moderately" = "#FFC107",
+      "A lot" = "#FF9800",
+      "Extremely" = "#F44336"
+    )
+  ) +
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid.major.y = element_line(size = 0.1, color = "grey80")
-  )
+    panel.grid.major.y = element_line(linewidth = 0.1, color = "grey80")
+  ))
 
 # Export it ---------------------------------------------------------------
 

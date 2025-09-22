@@ -21,65 +21,17 @@ walk(list.files("R/functions", full.names = TRUE), source)
 data <- readRDS("data/processed/data_fr.rds")
 
 # Subset and modify the data
-df <- data |>
-  filter(lastpage == 16) |>
-  select(id, answer = S5)
-
-# Pivot to long, filter unwanted answers and label the variables
-df_long <- df |>
-  mutate(across(-id, remove_val_labels)) |>
-  filter(!is.na(answer)) |>
-  mutate(
-    answer = factor(
-      answer,
-      levels = c(1:6),
-      labels = c(
-        "Not at all",
-        "Slightly",
-        "Moderately",
-        "A lot",
-        "Extremely",
-        "I don't know"
-      )
-    )
-  )
-
-# Make into a count table
-df_count <- df_long |>
-  count(answer) |>
-  add_count(name = "total", wt = n) |>
-  mutate(
-    percentage = n / sum(n) * 100,
-    perc_label = scales::percent(percentage / 100, accuracy = 1),
-    label = glue("{n}\n({perc_label})")
-  )
-
+df <- pivot_impact_data(data, var = "S5")
 
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Impact of the psychosis disorder on financial situation (N={unique(df_count$total)})"
+  "Impact of the psychosis disorder on the financial situation (N={unique(df$total)})"
 )
 
 # Create the figure --------------------------------------------------------
 
-fig <- df_count |>
-  ggplot(aes(x = answer, y = n, fill = answer)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(label = label), vjust = -0.5, size = 5) +
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.45))) +
-  labs(
-    title = str_wrap(caption, width = 60),
-    x = "",
-    y = "Number of patients"
-  ) +
-  theme_kce(font_size = 16) +
-  see::scale_fill_material() +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.grid.major.y = element_line(size = 0.1, color = "grey80")
-  )
+fig <- plot_impact_data(df, caption = caption)
 
 # Export it ---------------------------------------------------------------
 

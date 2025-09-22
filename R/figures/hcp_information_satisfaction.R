@@ -25,7 +25,20 @@ df <- data |>
   filter(lastpage == 16) |>
   select(id, answer = HC10) |>
   filter(!is.na(answer)) |>
-  mutate(answer = to_factor(answer))
+  mutate(
+    answer = remove_val_labels(answer) |>
+      factor(
+        levels = c(6, 1:5),
+        labels = c(
+          "I don't know",
+          "Always",
+          "Often",
+          "Sometimes",
+          "Rarely",
+          "Never"
+        )
+      )
+  )
 
 # Make into a count table
 df_count <- df |>
@@ -54,7 +67,17 @@ fig <- ggplot(df_count, aes(x = answer, y = percentage, fill = answer)) +
     y = "Number of patients"
   ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.3))) +
-  see::scale_fill_material(name = NULL) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "Always" = "#2196F3",
+      "Often" = "#8BC34A",
+      "Sometimes" = "#FFC107",
+      "Rarely" = "#FF9800",
+      "Never" = "#F44336"
+    )
+  ) +
   theme_kce(font_size = 14) +
   theme(
     legend.position = "none",

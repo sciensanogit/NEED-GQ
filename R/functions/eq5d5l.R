@@ -36,6 +36,7 @@ plot_eq5d5l <- function(data, category_name = NULL, caption = NULL) {
 plot_eq5d5l_sankey <- function(data, caption = NULL) {
   # Reshape the data to appropriate format for sankey
   data |>
+    mutate(timepoint = str_wrap(timepoint, width = 20)) |>
     ggplot(aes(
       x = timepoint,
       stratum = value,
@@ -45,8 +46,27 @@ plot_eq5d5l_sankey <- function(data, caption = NULL) {
     )) +
     ggalluvial::geom_flow(stat = "alluvium", lode.guidance = "frontback") +
     ggalluvial::geom_stratum() +
-    # geom_label(stat = "stratum", size = 3, fill = "white") +
-    see::scale_fill_material(name = "Level") +
+    geom_text(
+      stat = "stratum",
+      aes(
+        label = ifelse(
+          after_stat(prop) <= 0.045,
+          "*",
+          scales::percent(after_stat(prop), accuracy = 1)
+        )
+      )
+    ) +
+    scale_fill_manual(
+      name = "Level",
+      values = c(
+        "I don't know" = "#B0BEC5",
+        "None" = "#2196F3",
+        "Slight" = "#4CAF50",
+        "Moderate" = "#FFC107",
+        "Severe" = "#FF9800",
+        "Extreme" = "#F44336"
+      )
+    ) +
     scale_x_discrete(expand = expansion(mult = 0.3)) +
     theme_void(14) +
     theme(
@@ -60,6 +80,7 @@ plot_eq5d5l_sankey <- function(data, caption = NULL) {
       ),
       legend.box.margin = margin(0, 15, 0, 0)
     ) +
+    labs(caption = "* < 5%") +
     ggtitle(str_wrap(caption, width = 40))
 }
 
@@ -68,12 +89,12 @@ pivot_eq5d5l_data <- function(data, col1, col2) {
     filter(lastpage == 16) |>
     select(id, all_of(c(col1, col2))) |>
     mutate(across(-id, labelled::remove_val_labels)) |>
+    filter(!(is.na(.data[[col1]]) & is.na(.data[[col2]]))) |>
     pivot_longer(
       cols = -id,
       names_to = "timepoint",
       values_to = "value"
     ) |>
-    filter(value != 6) |>
     mutate(
       timepoint = case_when(
         timepoint == col1 ~ "Before onset of first symptoms",
@@ -82,8 +103,9 @@ pivot_eq5d5l_data <- function(data, col1, col2) {
         factor(levels = c("Before onset of first symptoms", "Today")),
       value = factor(
         value,
-        levels = 1:5,
+        levels = c(6, 1:5),
         labels = c(
+          "I don't know",
           "None",
           "Slight",
           "Moderate",

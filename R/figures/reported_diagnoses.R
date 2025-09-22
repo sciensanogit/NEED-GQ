@@ -11,7 +11,7 @@
 
 library(tidyverse)
 library(glue)
-library(ggtext)
+library(labelled)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)
@@ -26,18 +26,13 @@ df <- data |>
   filter(lastpage == 16) |>
   select(id, starts_with("DSD1_A"))
 
-# Isolate the diagnoses from the column labels
-diagnoses <- names(df)[-1] |>
-  map_chr(~ attr(data[[.x]], "label")) |>
-  str_extract("(?<=\\[)[^]]+(?=\\])") |>
-  str_trim()
-
 # Assign the diagnoses as column names
-diag_df <- setNames(names(df)[-1], diagnoses) |>
-  enframe(name = "diagnosis", value = "variable")
+diag_df <- get_labels(df, include = -id) |>
+  rename(diagnosis = label)
 
 # Pivot the data to long format and count the number of responses per diagnosis
 fig_df <- df |>
+  mutate(across(-id, remove_val_labels)) |>
   pivot_longer(
     cols = starts_with("DSD1_A"),
     names_to = "variable",
@@ -47,7 +42,12 @@ fig_df <- df |>
   group_by(variable) |>
   summarise(n = n(), .groups = "drop") |>
   arrange(desc(n)) |>
-  left_join(diag_df, by = "variable")
+  left_join(diag_df, by = "variable") |>
+  mutate(
+    diagnosis = as_factor(diagnosis) |>
+      fct_reorder(n) |>
+      fct_relevel("Je ne sais pas", after = 0)
+  )
 
 # Compute total number of responses
 n_total <- nrow(df)
@@ -55,18 +55,22 @@ n_total <- nrow(df)
 # Create the figure --------------------------------------------------------
 
 fig <- fig_df |>
-  ggplot(aes(y = reorder(diagnosis, n), x = n)) +
+  mutate(
+    perc = n / n_total,
+    label = glue("{n} ({scales::percent(perc, accuracy = 1)})")
+  ) |>
+  ggplot(aes(y = diagnosis, x = n)) +
   geom_col(fill = "steelblue") +
-  geom_text(aes(label = n), hjust = -0.25, size = 5) +
+  geom_text(aes(label = label), hjust = -0.25, size = 4) +
   scale_x_continuous(
     breaks = scales::breaks_width(width = 5),
-    expand = expansion(mult = c(0, 0.1))
+    expand = expansion(mult = c(0, 0.3))
   ) +
   labs(
     y = "",
     x = "Number of responses",
     title = glue::glue(
-      "Reported diagnoses (N = {n_total}).  One participant could have indicated multiple diagnoses, hence these numbers are not participants but responses."
+      "Reported diagnoses (N = {n_total})"
     ) |>
       str_wrap(50)
   ) +

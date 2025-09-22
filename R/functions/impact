@@ -1,0 +1,60 @@
+# All functions for impact-type graphs
+pivot_impact_data <- function(df, var) {
+  df |>
+    filter(lastpage == 16) |>
+    select(id, answer := all_of(var)) |>
+    filter(!is.na(answer)) |>
+    mutate(
+      answer = remove_val_labels(answer) |>
+        factor(
+          levels = c(6, 7, 1:5),
+          labels = c(
+            "I don't know",
+            "Not applicable",
+            "Not at all",
+            "Slightly",
+            "Moderately",
+            "A lot",
+            "Extremely"
+          )
+        )
+    ) |>
+    count(answer) |>
+    add_count(name = "total", wt = n) |>
+    mutate(
+      percentage = n / sum(n) * 100,
+      perc_label = scales::percent(percentage / 100, accuracy = 1),
+      label = glue("{n}\n({perc_label})")
+    )
+}
+
+plot_impact_data <- function(df, caption) {
+  source(here::here("R/functions/theme_kce.R"))
+  df |>
+    ggplot(aes(x = answer, y = percentage, fill = answer)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = label), vjust = -0.5, size = 5) +
+    labs(
+      x = NULL,
+      y = "Number of patients",
+      title = stringr::str_wrap(caption, width = 60),
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.3))) +
+    scale_fill_manual(
+      name = NULL,
+      values = c(
+        "Not at all" = "#2196F3",
+        "Slightly" = "#8BC34A",
+        "Moderately" = "#FFC107",
+        "A lot" = "#FF9800",
+        "Extremely" = "#F44336",
+        "I don't know" = "#B0BEC5",
+        "Not applicable" = "#B0BEC5"
+      )
+    ) +
+    theme_kce(font_size = 14) +
+    theme(
+      legend.position = "none",
+      panel.grid.major.y = element_line(size = 0.1, color = "grey80")
+    )
+}

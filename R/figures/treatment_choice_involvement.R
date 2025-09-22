@@ -24,8 +24,25 @@ data <- readRDS("data/processed/data_fr.rds")
 df <- data |>
   filter(lastpage == 16) |>
   select(id, answer = HC11) |>
-  filter(!is.na(answer) & answer != 6) |> # Remove non-applicable answers
-  mutate(answer = to_factor(answer))
+  filter(!is.na(answer)) |>
+  mutate(
+    answer = remove_val_labels(answer) |>
+      factor(
+        levels = c(7, 6, 1:5),
+        labels = str_wrap(
+          c(
+            "I don't know",
+            "Not applicable",
+            "No, but I didn't want to be involved",
+            "No, definitely not",
+            "No, not really",
+            "Yes, to some extent",
+            "Yes, definitely"
+          ),
+          20
+        )
+      )
+  )
 
 # Make into a count table
 df_count <- df |>
@@ -44,7 +61,6 @@ caption <- glue("Level of involvement in treatment choice (N={nrow(df)}).")
 # Create the figure --------------------------------------------------------
 
 fig <- df_count |>
-  mutate(answer = str_wrap(answer, 20)) |>
   ggplot(aes(x = answer, y = percentage, fill = answer)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 5) +
@@ -54,7 +70,18 @@ fig <- df_count |>
     y = "Number of patients"
   ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.3))) +
-  see::scale_fill_material(name = NULL) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "Not applicable" = "#B0BEC5",
+      "Yes, definitely" = "#2196F3",
+      "Yes, to some extent" = "#8BC34A",
+      "No, not really" = "#FFC107",
+      "No, definitely not" = "#FF9800",
+      "No, but I didn't\nwant to be involved" = "#F44336"
+    )
+  ) +
   theme_kce(font_size = 14) +
   theme(
     legend.position = "none",

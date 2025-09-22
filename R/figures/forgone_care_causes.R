@@ -43,6 +43,10 @@ df_long <- df |>
 # Count the number of responses per diagnosis
 df_count <- df_long |>
   count(label, name = "n") |>
+  mutate(
+    perc = n / nrow(df),
+    text_label = glue("{n} ({scales::percent(perc, accuracy = 1)})")
+  ) |>
   arrange(desc(n))
 
 # Define caption -----------------------------------------------------------------
@@ -56,10 +60,10 @@ caption <- glue(
 fig <- df_count |>
   ggplot(aes(y = reorder(label, n), x = n)) +
   geom_col(fill = "steelblue") +
-  geom_text(aes(label = n), hjust = -0.25, size = 5) +
+  geom_text(aes(label = text_label), hjust = -0.25, size = 5) +
   scale_x_continuous(
     breaks = scales::breaks_width(width = 5),
-    expand = expansion(mult = c(0, 0.1))
+    expand = expansion(mult = c(0, 0.4))
   ) +
   scale_y_discrete(
     labels = function(x) str_wrap(x, width = 40) # Wrap long labels

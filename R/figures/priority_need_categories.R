@@ -42,22 +42,26 @@ df_long <- df |>
   mutate(
     answer = factor(
       answer,
-      levels = c(1:6),
+      levels = c(6, 1:5),
       labels = c(
+        "I don't know",
         "Not a priority",
         "Low priority",
         "Medium priority",
         "High priority",
-        "Very high priority",
-        "Don't know"
+        "Very high priority"
       )
     )
   ) |>
-  left_join(labs, by = join_by("question" == "variable"))
+  left_join(labs, by = join_by("question" == "variable")) |>
+  mutate(
+    n_ordering = sum(as.numeric(answer) %in% c(5, 6)),
+    .by = c(label)
+  )
 
 # Count the number of responses per category and answer
 df_count <- df_long |>
-  count(label, answer) |>
+  count(label, n_ordering, answer) |>
   mutate(total = sum(n), .by = label)
 
 # Define caption -----------------------------------------------------------------
@@ -69,14 +73,24 @@ caption <- glue(
 # Create the figure --------------------------------------------------------
 
 fig <- df_count |>
-  ggplot(aes(x = n, y = reorder(label, total), fill = answer)) +
+  ggplot(aes(x = n, y = reorder(label, n_ordering), fill = answer)) +
   geom_col(position = "stack") +
   scale_x_continuous(
     breaks = scales::breaks_width(width = 10),
     expand = expansion(mult = c(0, 0)),
     limits = c(0, NA)
   ) +
-  see::scale_fill_material(name = "", na.translate = F) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "I don't know" = "#B0BEC5",
+      "Not a priority" = "#2196F3",
+      "Low priority" = "#4CAF50",
+      "Medium priority" = "#FFC107",
+      "High priority" = "#FF9800",
+      "Very high priority" = "#F44336"
+    )
+  ) +
   scale_y_discrete(
     labels = function(x) str_wrap(x, width = 40) # Wrap long labels
   ) +

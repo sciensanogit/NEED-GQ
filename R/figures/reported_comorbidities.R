@@ -57,18 +57,22 @@ n_total <- nrow(df)
 # Define caption |>str_wrap(50) -----------------------------------------------------------------
 
 caption <- glue(
-  "Reported comorbidities (N={n_total}). Participants could select multiple options; values represent the number of responses, not individual participants."
+  "Reported comorbidities (N={n_total})"
 )
 
 # Create the figure --------------------------------------------------------
 
 fig <- fig_df |>
+  mutate(
+    perc = n / n_total,
+    label = glue("{n} ({scales::percent(perc, accuracy = 1)})")
+  ) |>
   ggplot(aes(y = reorder(comorbidity, n), x = n)) +
   geom_col(fill = "steelblue") +
-  geom_text(aes(label = n), hjust = -0.25, size = 5) +
+  geom_text(aes(label = label), hjust = -0.25, size = 5) +
   scale_x_continuous(
     breaks = scales::breaks_width(width = 5),
-    expand = expansion(mult = c(0, 0.1))
+    expand = expansion(mult = c(0, 0.4))
   ) +
   scale_y_discrete(
     labels = function(x) str_wrap(x, width = 40) # Wrap long labels
