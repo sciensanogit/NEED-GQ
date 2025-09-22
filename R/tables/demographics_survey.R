@@ -21,7 +21,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset to demographics variables only
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(
     id,
     startlanguage,

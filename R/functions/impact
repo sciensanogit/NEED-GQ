@@ -1,7 +1,7 @@
 # All functions for impact-type graphs
 pivot_impact_data <- function(df, var) {
   df |>
-    filter(lastpage == 16) |>
+    filter(included == 1L) |>
     select(id, answer := all_of(var)) |>
     filter(!is.na(answer)) |>
     mutate(

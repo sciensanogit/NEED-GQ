@@ -22,7 +22,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset to relevant columns and filter to last survey only
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   filter(HC12 == 1) |> # Forgone care reported
   select(id, matches("^HC13_SQ\\d+$"))
 

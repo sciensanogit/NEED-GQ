@@ -23,7 +23,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset to relevant variables and patients who reached last page (16)
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, starts_with("DSD1_A"))
 
 # Assign the diagnoses as column names

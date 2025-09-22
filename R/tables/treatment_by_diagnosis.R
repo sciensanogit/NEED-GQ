@@ -25,7 +25,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset treatments variables
 trt <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, matches("HC3_SQ.+")) |>
   mutate(across(-id, ~ remove_val_labels(.x) - 1))
 trt_long <- trt |>
@@ -34,7 +34,7 @@ trt_long <- trt |>
 
 # Subset diagnosis variables
 diag <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, starts_with("DSD1_A")) |>
   mutate(across(-id, ~ remove_val_labels(.x) - 1))
 diag_long <- diag |>

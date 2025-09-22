@@ -22,7 +22,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset patients that finished the survey and EQ-5D-5L questions
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, H6, H12)
 
 # Pivot to long format and label the time points

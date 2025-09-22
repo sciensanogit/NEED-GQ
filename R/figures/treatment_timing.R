@@ -23,7 +23,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset and modify the data
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, D13, D13b, DSHC1, HC1)
 
 # Create separate datasets for each treatment timing

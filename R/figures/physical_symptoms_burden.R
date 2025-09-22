@@ -24,7 +24,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset to relevant columns and filter to last survey only
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, matches("^HC5_SQ\\d+$"))
 # Setting the Likert scale as an ordered factor
 # mutate(across(starts_with("HC5_SQ"), ~to_factor(.x)))

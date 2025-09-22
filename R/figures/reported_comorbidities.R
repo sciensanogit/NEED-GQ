@@ -23,7 +23,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset to relevant columns and filter to last survey only
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   filter(D14 == 1) |> # Other health conditions reported
   select(id, matches("^D15_\\d+$"))
 

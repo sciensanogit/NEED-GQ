@@ -86,7 +86,7 @@ plot_eq5d5l_sankey <- function(data, caption = NULL) {
 
 pivot_eq5d5l_data <- function(data, col1, col2) {
   data |>
-    filter(lastpage == 16) |>
+    filter(included == 1L) |>
     select(id, all_of(c(col1, col2))) |>
     mutate(across(-id, labelled::remove_val_labels)) |>
     filter(!(is.na(.data[[col1]]) & is.na(.data[[col2]]))) |>

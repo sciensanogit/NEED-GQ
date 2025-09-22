@@ -26,7 +26,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset and modify the data
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, S2, S3, S3b) |>
   # Redefine categories for the number of years not working (S3b)
   mutate(

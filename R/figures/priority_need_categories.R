@@ -22,7 +22,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset the data and select the relevant variables
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, starts_with("P1"))
 
 # Obtain labels

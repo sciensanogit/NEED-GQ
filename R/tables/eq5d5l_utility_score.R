@@ -22,7 +22,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset to EQ-5D-5L utility score only
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, H6, H12) |>
   mutate(change = H12 - H6) |>
   pivot_longer(

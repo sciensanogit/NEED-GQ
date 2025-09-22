@@ -23,7 +23,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset and keep only the relevant variables
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, HC7, HC9) |>
   filter(if_any(c(HC7, HC9), ~ !is.na(.)))
 

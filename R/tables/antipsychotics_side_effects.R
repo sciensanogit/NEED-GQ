@@ -26,14 +26,14 @@ data <- read_rds("data/processed/data_fr.rds")
 
 # Subset drug information
 drug <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, matches("HC3_SQ.+"))
 drug_long <- drug |>
   pivot_longer(-id, names_to = "drug", values_to = "value")
 
 # Subset side effects information
 side_effects <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, matches("HC4_SQ.+"))
 side_effects_long <- side_effects |>
   pivot_longer(-id, names_to = "side_effect", values_to = "value")

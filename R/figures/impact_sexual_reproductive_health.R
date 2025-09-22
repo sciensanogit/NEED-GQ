@@ -26,7 +26,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset and modify the data
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, H14, H15)
 
 # Pivot to long, filter unwanted answers and label the variables

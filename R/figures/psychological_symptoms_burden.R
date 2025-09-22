@@ -23,7 +23,7 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Select variables of interest and patients who completed the questionnaire
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, starts_with("H13_SQ"))
 
 # Extract labels

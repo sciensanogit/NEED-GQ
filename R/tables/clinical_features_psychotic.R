@@ -25,7 +25,7 @@ data <- read_rds("data/processed/data_fr.rds")
 
 # Subset data and patients of interest
 df <- data |>
-  filter(lastpage == 16) |>
+  filter(included == 1L) |>
   select(id, matches("HC13_SQ.+")) |>
   mutate(across(-id, ~ labelled::remove_val_labels(.x) - 1))
 

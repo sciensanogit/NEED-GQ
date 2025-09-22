@@ -3601,6 +3601,55 @@ write.xlsx(
   somearg = TRUE
 )
 
+# Define included/excluded patients ----------------------------------------------
+
+data <- data |>
+  mutate(included = as.integer(lastpage == 16), .after = id)
+
+# Load exclusion IDs
+excl <- readxl::read_excel(
+  "data/raw/20250918_Inclusion and exclusion.xlsx",
+  sheet = "To be excluded",
+  skip = 1
+)
+excl_id <- excl$ID
+
+# Load inclusion IDS
+incl <- readxl::read_excel(
+  "data/raw/20250918_Inclusion and exclusion.xlsx",
+  sheet = "Extra inclusions",
+  skip = 1
+)
+incl_id <- incl$ID
+
+# Modify data accordingly
+data <- data |>
+  mutate(
+    included = case_when(
+      id %in% excl_id ~ 0L,
+      id %in% incl_id ~ 1L,
+      TRUE ~ included
+    )
+  )
+
+# Redefine wrong diagnoses -------------------------------------------------------
+
+diag <- readxl::read_excel(
+  "data/raw/20250918_Inclusion and exclusion.xlsx",
+  sheet = "Changes to be made",
+  skip = 1
+)
+for (i in seq_len(nrow(diag))) {
+  col <- diag$`Associated variable`[i]
+  id <- diag$ID[i]
+  data[data$id == id, col] <- 1
+}
+
+# UNCOMMENT to check changes
+# data |>
+#   filter(id %in% diag$ID) |>
+#   select(id, starts_with("DSD1_A"))
+
 # Save data ----------------------------------------------------------------------
 
 saveRDS(data, here("data", "processed", "data_fr.rds"))
