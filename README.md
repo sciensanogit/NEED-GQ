@@ -43,20 +43,13 @@ The `results` directory contains output files such as figures, organized into:
 
 The `templates` directory contains templates for R files for new figures and tables.
 
-## TO DO
+## Data management (to do's)
 
-- [ ] Fix the import script for raw data in NL
-- [ ] Fix the import script for raw data in EN
+- [ ] Adapt import scripts for raw data to other languages
+
+- [ ] Create data dictionarry in every language
 
 ### Data import issue
-
-The script importing and relabeling the data in EN (and NL too) is not working properly because it labels 218 columns while the actual datasets contains 251 columns. Therefore, some columns are not labelled, and some might be matched to a wrong label.
-
-The best way to solve this would be to generate a data dictionary for the FR version, and a data dictionary for the EN version. Then, they could be compared to fix the EN version. This EN data dictionary could then be used to relabel the raw data properly.
-
-WARNING: this might take some time to setup so it hasn't been done now.
-
-Another option is that Robby fixes the EN script manually.
 
 ## Progress
 

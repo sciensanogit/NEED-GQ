@@ -9,3 +9,10 @@
 ~$*
 docs/
 results.zip
+results/figures/*
+!results/figures/.gitkeep
+results/tables/*
+!results/tables/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/processed/data_fr.rds
