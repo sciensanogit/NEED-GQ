@@ -5,6 +5,7 @@
 #'               HC7, HC8, HC9.
 #' Files created: - `results/figures/png/care_organization_experience.png`
 #'                - `results/figures/pptx/care_organization_experience.pptx`
+#'                - `data/processed/subdata/care_organization_experience_data.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -56,6 +57,17 @@ df_long <- df |>
         )
       )
   )
+
+# Save the processed data
+df_long |>
+  select(id, variable, answer) |>
+  mutate(
+    answer_num = as.numeric(answer),
+    answer_num = ifelse(answer_num == 6, NA, answer_num) # Convert "I don't know" to NA
+  ) |>
+  select(-answer) |>
+  pivot_wider(names_from = variable, values_from = answer_num) |>
+  saveRDS("data/processed/subdata/care_organization_experience_data.rds")
 
 # Count the answers by variable
 df_count <- df_long |>

@@ -112,6 +112,8 @@ pivot_eq5d5l_data <- function(data, col1, col2) {
           "Severe",
           "Extreme"
         )
-      )
+      ),
+      value_num = as.numeric(value) - 1, # Numeric version for statistical tests
+      value_num = ifelse(value == 0, NA, value_num) # Replace 0 (I don't know) by NA
     )
 }

@@ -4,6 +4,7 @@
 #' Purpose      :
 #' Files created: - `results/figures/png/hcp_information_satisfaction.png`
 #'                - `results/figures/pptx/hcp_information_satisfaction.pptx`
+#'                - `data/processed/subdata/hcp_information_satisfaction.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -39,6 +40,15 @@ df <- data |>
         )
       )
   )
+
+# Turn into numeric scale and save the data
+df |>
+  mutate(
+    answer_num = as.numeric(answer) - 1,
+    answer_num = if_else(answer == "I don't know", NA_real_, answer_num)
+  ) |>
+  select(id, hcp_information_satisfaction = answer_num) |>
+  saveRDS("data/processed/subdata/hcp_information_satisfaction.rds")
 
 # Make into a count table
 df_count <- df |>

@@ -29,7 +29,6 @@ lbl_list <- map_chr(df[, -1], function(x) attr(x, "label")) |>
   setNames(names(df)[-1]) |>
   as.list()
 
-
 # Pivot to long format and add the labels
 df_long <- df |>
   pivot_longer(-id, names_to = "question", values_to = "response") |>
@@ -37,7 +36,23 @@ df_long <- df |>
     label = recode(question, !!!lbl_list) |>
       factor(levels = unlist(lbl_list))
   ) |>
-  filter(response == 1) |>
+  filter(response == 1)
+
+# Save the processed data
+df_long |>
+  mutate(response_num = as.numeric(response)) |>
+  select(id, question, response_num) |>
+  pivot_wider(names_from = question, values_from = response_num) |>
+  set_variable_labels(
+    .labels = distinct(df_long, question, label) |>
+      mutate(label = as.character(label)) |>
+      deframe() |>
+      as.list()
+  ) |>
+  write_rds("data/processed/subdata/unmet_social_support.rds")
+
+# Summarise data
+df_long <- df_long |>
   count(label) |>
   mutate(
     label = fct_reorder(label, n) |>

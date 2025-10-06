@@ -5,6 +5,7 @@
 #'                and after onset of the first symptoms.
 #' Files created: - `results/figures/png/eq5d5l_usual_activities.png`
 #'                - `results/figures/pptx/eq5d5l_usual_activities.pptx`
+#'               - `data/processed/subdata/eq5d5l_usual_activities.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -24,6 +25,12 @@ data <- readRDS("data/processed/data_fr.rds")
 # Subset patients that finished the survey and EQ-5D-5L questions and pivot to long
 # format and label the time points
 df_long <- pivot_eq5d5l_data(data, "H3", "H9")
+
+# Save the long data frame for future use
+df_long |>
+  filter(timepoint == "Today") |>
+  select(id, eq5d5l_usual_activities = value_num) |>
+  saveRDS("data/processed/subdata/eq5d5l_usual_activities.rds")
 
 # Define caption -----------------------------------------------------------------
 

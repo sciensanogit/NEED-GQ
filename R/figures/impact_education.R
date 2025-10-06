@@ -5,6 +5,7 @@
 #'                Patients with NA answers are excluded.
 #' Files created: - `results/figures/png/impact_education.png`
 #'                - `results/figures/pptx/impact_education.pptx`
+#'                - `data/processed/subdata/impact_education.rds` (intermediate data)
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -23,7 +24,15 @@ data <- readRDS("data/processed/data_fr.rds")
 
 # Subset patients that finished the survey and impact questions and pivot to long
 # format and label the answers
-df <- pivot_impact_data(data, var = "S1")
+df_long <- pivot_impact_data(data, var = "S1")
+
+# Save the intermediate data
+df_long |>
+  select(id, impact_education = answer_num) |>
+  saveRDS("data/processed/subdata/impact_education.rds")
+
+# Summarize the number of patients per answer
+df <- summarize_impact_data(df_long)
 
 # Define caption -----------------------------------------------------------------
 

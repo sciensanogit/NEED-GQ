@@ -4,6 +4,7 @@
 #' Purpose      :
 #' Files created: - `results/figures/png/treatment_timing.png`
 #'                - `results/figures/pptx/treatment_timing.pptx`
+#'                - `data/processed/subdata/treatment_timing_data.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -67,6 +68,10 @@ df_diag$answer <- factor(
   )
 )
 
+# Extract the subdata
+df_sub <- df_diag |>
+  select(id, time_to_diagnosis = answer)
+
 ## First symptoms
 df_symp <- df |>
   select(id, answer = DSHC1) |>
@@ -84,7 +89,14 @@ df_symp <- df |>
         )
       )
   ) |>
-  filter(!is.na(answer)) |>
+  filter(!is.na(answer))
+
+# Join with the diagnosis data to keep only included patients
+df_sub <- df_sub |>
+  full_join(df_symp |> select(id, time_to_symp = answer), by = "id")
+
+# summarize the total number of unique patients
+df_symp <- df_symp |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
   mutate(
@@ -110,7 +122,18 @@ df_hc <- df |>
         )
       )
   ) |>
-  filter(!is.na(answer)) |>
+  filter(!is.na(answer))
+
+# Join with the diagnosis data to keep only included patients
+df_sub <- df_sub |>
+  full_join(df_hc |> select(id, time_to_hc = answer), by = "id")
+
+# Save the processed data
+df_sub |>
+  saveRDS("data/processed/subdata/treatment_timing_data.rds")
+
+# summarize the total number of unique patients
+df_hc <- df_hc |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
   mutate(

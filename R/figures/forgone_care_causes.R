@@ -4,6 +4,7 @@
 #' Purpose      :
 #' Files created: - `results/figures/png/forgone_care_causes.png`
 #'                - `results/figures/pptx/forgone_care_causes.pptx`
+#'                - `data/processed/subdata/forgone_care_causes_data.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -39,6 +40,21 @@ df_long <- df |>
   ) |>
   filter(response == 1) |>
   left_join(labs, by = "variable")
+
+# Pivot to wide format and save for future use
+df_long |>
+  select(id, variable, response) |>
+  mutate(response = unclass(response)) |>
+  pivot_wider(
+    names_from = variable,
+    values_from = response,
+    values_fill = 0
+  ) |>
+  set_variable_labels(
+    .labels = as.list(labs$label) |> setNames(labs$variable),
+    .strict = FALSE
+  ) |>
+  write_rds("data/processed/subdata/forgone_care_causes_data.rds")
 
 # Count the number of responses per diagnosis
 df_count <- df_long |>

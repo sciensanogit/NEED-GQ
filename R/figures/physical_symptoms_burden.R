@@ -6,6 +6,7 @@
 #'               Using the French dataset.
 #' Files created: - `results/figures/png/physical_symptoms_burden.png`
 #'                - `results/figures/pptx/physical_symptoms_burden.pptx`
+#'                - `data/processed/subdata/physical_symptoms_burden.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -46,8 +47,24 @@ df_long <- df |>
   ) |>
   filter(!is.na(response) & response != 6) |>
   mutate(response = to_factor(response)) |>
+  left_join(labels, by = "variable")
+
+# Turn answers to numeric and pivot to wide. Then, save the dataset
+df_long |>
+  mutate(
+    response_num = as.numeric(response),
+    response_num = ifelse(response_num == 6, NA, response_num) # Treat "I don't know" as missing
+  ) |>
+  select(id, variable, response_num) |>
+  pivot_wider(names_from = variable, values_from = response_num) |>
+  set_variable_labels(
+    .labels = distinct(df_long, variable, label) |> deframe() |> as.list()
+  ) |>
+  saveRDS("data/processed/subdata/physical_symptoms_burden.rds")
+
+# Count the number of responses per symptom and level of burden
+df_long <- df_long |>
   count(variable, response) |>
-  left_join(labels, by = "variable") |>
   mutate(total = sum(n), .by = variable)
 
 n_total <- nrow(df)

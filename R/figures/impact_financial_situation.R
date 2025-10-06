@@ -4,6 +4,7 @@
 #' Purpose      :
 #' Files created: - `results/figures/png/impact_financial_situation.png`
 #'                - `results/figures/pptx/impact_financial_situation.pptx`
+#'               - `data/processed/subdata/impact_financial_situation.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -21,7 +22,15 @@ walk(list.files("R/functions", full.names = TRUE), source)
 data <- readRDS("data/processed/data_fr.rds")
 
 # Subset and modify the data
-df <- pivot_impact_data(data, var = "S5")
+df_long <- pivot_impact_data(data, var = "S5")
+
+# Save the intermediate data
+df_long |>
+  select(id, impact_financial_situation = answer_num) |>
+  saveRDS("data/processed/subdata/impact_financial_situation.rds")
+
+# Summarize the number of patients per answer
+df <- summarize_impact_data(df_long)
 
 # Define caption -----------------------------------------------------------------
 

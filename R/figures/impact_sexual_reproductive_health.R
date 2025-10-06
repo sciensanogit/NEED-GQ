@@ -7,6 +7,7 @@
 #'              (French version)
 #' Files created: - `results/figures/png/impact_sexual_reproductive_health.png`
 #'                - `results/figures/pptx/impact_sexual_reproductive_health.pptx`
+#'                - `data/processed/subdata/impact_sexual_reproductive_health.rds`
 #' Edits        : - Sep 19: Add "I don't know" and "NA" as answers in gray at the left
 #'                  of the plot
 
@@ -58,6 +59,24 @@ df_long <- df |>
       )
     )
   )
+
+# Save subdata to file
+df_long |> 
+  mutate(
+    answer_num = as.numeric(answer) - 2,
+    answer_num = ifelse(answer_num < 0, NA, answer_num),
+    question = case_match(
+      question,
+      "Sexual life" ~ "sexual_health",
+      "Reproductive life" ~ "reproductive_health"
+    )
+  ) |>
+  select(-answer) |> 
+  pivot_wider(
+    names_from = question,
+    values_from = answer_num
+  ) |> 
+  saveRDS("data/processed/subdata/impact_sexual_reproductive_health.rds")
 
 # Make into a count table
 df_count <- df_long |>

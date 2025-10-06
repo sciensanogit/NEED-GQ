@@ -3,8 +3,9 @@
 #' Date         : 22 September 2025
 #' Purpose      : description
 #' Files created:
-#'  - `data/tables/treatment_by_diagnosis.R.rds`
-#'  - `output/tables/treatment_by_diagnosis.R.docx/html` (optional)
+#'  - `data/tables/treatment_by_diagnosis.rds`
+#'  - `output/tables/treatment_by_diagnosis.docx/html` (optional)
+#'  - `data/processed/subdata/treatment_by_diagnosis.rds`
 #' Edits        :
 #'  - 22 September 2025: Created file.
 
@@ -67,6 +68,12 @@ df_count_lbl <- df |>
   rename(treatment_label = label) |>
   left_join(diag_lbl, by = c("diagnosis" = "variable")) |>
   rename(diagnosis_label = label)
+
+# Save treatment info in a separate sub data set
+trt_long |> 
+  pivot_wider(names_from = treatment, values_from = value, values_fill = 0) |> 
+  set_variable_labels(.labels = as.list(trt_lbl$label) |> setNames(trt_lbl$variable)) |> 
+  saveRDS("data/processed/subdata/treatment_by_diagnosis.rds")
 
 # Create table -------------------------------------------------------------------
 

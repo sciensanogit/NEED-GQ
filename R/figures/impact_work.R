@@ -3,10 +3,15 @@
 #' Date         : September 15, 2025
 #' Purpose      : Figure of the number of months/years the patient could not work
 #'                because of their illness. There are 2 patients with abnormal values:
-#'                one with 20412 years, the other with 320. They are excluded from the
+#'                one with 2012 years, the other with 320. They are excluded from the
 #'                figure.
 #' Files created: - `results/figures/png/impact_work.png`
 #'                - `results/figures/pptx/impact_work.pptx`
+#'               - `results/figures/png/impact_work_s2.png`
+#'               - `results/figures/pptx/impact_work_s2.pptx`
+#'              - `results/figures/png/impact_work_s3.png`
+#'              - `results/figures/pptx/impact_work_s3.pptx`
+#'              - `data/processed/subdata/impact_work.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -74,6 +79,11 @@ df$answer <- factor(
     ">20 years"
   )
 )
+
+# Save the modified data
+df |>
+  select(id, impact_work = S2, time_not_working = answer) |>
+  saveRDS("data/processed/subdata/impact_work.rds")
 
 # Define the count table for S2
 df_s2 <- df |>

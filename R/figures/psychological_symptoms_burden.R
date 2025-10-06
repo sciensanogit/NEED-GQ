@@ -5,6 +5,7 @@
 #'                H13_SQ* from the dataset. Using French data
 #' Files created: - `results/figures/png/psychological_symptoms_burden.png`
 #'                - `results/figures/pptx/psychological_symptoms_burden.pptx`
+#'               - `data/processed/subdata/psychological_symptoms_burden.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -57,6 +58,19 @@ df_long <- df |>
     n_ordering = sum(as.numeric(response) %in% c(6, 7)),
     .by = c(label)
   )
+
+# Save the processed data
+df_long |>
+  mutate(
+    response_num = as.numeric(response) - 2,
+    response_num = ifelse(response_num < 1, NA, response_num) # Treat "I didn't get this symptom" and "I don't know" as missing
+  ) |>
+  select(id, question, response_num) |>
+  pivot_wider(names_from = question, values_from = response_num) |>
+  set_variable_labels(
+    .labels = distinct(df_long, question, label) |> deframe() |> as.list()
+  ) |>
+  saveRDS("data/processed/subdata/psychological_symptoms_burden.rds")
 
 n_total <- n_distinct(df_long$id)
 

@@ -5,6 +5,7 @@
 #'                onset of first symptoms and today.
 #' Files created: - `results/figures/png/eq5d5l_anxiety_depression.png`
 #'                - `results/figures/pptx/eq5d5l_anxiety_depression.pptx`
+#'                - `data/processed/subdata/eq5d5l_anxiety_depression.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -24,6 +25,12 @@ data <- readRDS("data/processed/data_fr.rds")
 # Subset patients that finished the survey and EQ-5D-5L questions and pivot to long
 # format and label the time points
 df_long <- pivot_eq5d5l_data(data, "H5", "H11")
+
+# Save the long data frame for future use
+df_long |>
+  filter(timepoint == "Today") |>
+  select(id, eq5d5l_anxiety_depression = value_num) |>
+  saveRDS("data/processed/subdata/eq5d5l_anxiety_depression.rds")
 
 # Define caption -----------------------------------------------------------------
 

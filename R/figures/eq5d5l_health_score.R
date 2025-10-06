@@ -5,6 +5,7 @@
 #'                onset of first symptoms and today.
 #' Files created: - `results/figures/png/eq5d5l_health_score.png`
 #'                - `results/figures/pptx/eq5d5l_health_score.pptx`
+#'                - `data/processed/subdata/eq5d5l_health_score.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -43,6 +44,12 @@ df_long <- df |>
       levels = c("Before onset of first symptoms", "Today")
     )
   )
+
+# Save the long data frame for future use
+df_long |>
+  distinct(id, change) |>
+  rename(eq5d5l_health_score = change) |>
+  saveRDS("data/processed/subdata/eq5d5l_health_score.rds")
 
 # Define caption -----------------------------------------------------------------
 

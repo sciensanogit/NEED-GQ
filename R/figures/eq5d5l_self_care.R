@@ -4,7 +4,8 @@
 #' Purpose      : Create a figure for the EQ-5D-5L self-care dimension before and
 #'                after onset of the first symptoms.
 #' Files created: - `results/figures/png/eq5d5l_self_care.png`
-#'                - `results/figures/pptx/eq5d5l_self_care.pptx`
+#'               - `results/figures/pptx/eq5d5l_self_care.pptx`
+#'               - `data/processed/subdata/eq5d5l_self_care.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -24,6 +25,12 @@ data <- readRDS("data/processed/data_fr.rds")
 # Subset patients that finished the survey and EQ-5D-5L questions and pivot to long
 # format and label the time points
 df_long <- pivot_eq5d5l_data(data, "H2", "H8")
+
+# Save the long data frame for future use
+df_long |>
+  filter(timepoint == "Today") |>
+  select(id, eq5_self_care = value_num) |>
+  saveRDS("data/processed/subdata/eq5d5l_self_care.rds")
 
 # Define caption -----------------------------------------------------------------
 

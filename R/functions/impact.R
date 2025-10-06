@@ -17,8 +17,14 @@ pivot_impact_data <- function(df, var) {
             "A lot",
             "Extremely"
           )
-        )
-    ) |>
+        ),
+      answer_num = as.numeric(answer) - 2,
+      answer_num = if_else(answer_num < 1, NA, answer_num)
+    )
+}
+
+summarize_impact_data <- function(df) {
+  df |>
     count(answer) |>
     add_count(name = "total", wt = n) |>
     mutate(
