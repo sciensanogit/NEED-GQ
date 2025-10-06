@@ -16,3 +16,4 @@ results/tables/*
 data/raw/*
 !data/raw/.gitkeep
 data/processed/data_fr.rds
+report/report_docx_cache/
