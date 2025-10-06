@@ -1,0 +1,725 @@
+---
+title: "NEED project"
+subtitle: "Sub-analyses"
+author: "Alexandre Bohyn"
+output: officedown::rdocx_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(cache = TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+```{r load-packages}
+library(officedown)
+library(officer)
+library(tidyverse)
+library(here)
+library(labelled)
+library(gtsummary)
+library(flextable)
+library(flextable)
+```
+
+```{r group-data}
+# Load the processed data
+data <- readRDS(here("data/processed/data_fr.rds"))
+
+# Define the variables of interest for the sub-analyses
+df_lbl <- data |>
+  filter(included == 1) |>
+  select(
+    id,
+    gender = D2,
+    time_since_diag = D13,
+    diagnosis = DSD1_A1,
+    birthyear = D3,
+    province = D4,
+    living_situation = D6,
+    involvement = HC11
+  )
+
+# Recode some variables into less categories
+group <- df_lbl |>
+  mutate(
+    gender = remove_val_labels(gender) |>
+      factor(levels = c(1, 2), labels = c("Male", "Female")),
+    time_since_diag = case_match(
+      time_since_diag,
+      c(1, 2, 3, 4) ~ 0,
+      5 ~ 1,
+      6 ~ NA
+    ) |>
+      factor(levels = c(0, 1), labels = c("< 10 years", "10+ years")),
+    age = (2024 - birthyear) |>
+      cut(
+        breaks = c(0, 24, 65, Inf),
+        labels = c("< 25", "25-65", "65+"),
+        right = TRUE
+      ),
+    diagnosis = remove_val_labels(diagnosis) |>
+      factor(
+        levels = c(1, 2),
+        labels = c("Schizophrenia", "Other")
+      ),
+    region = remove_val_labels(province) |>
+      case_match(
+        c(1, 6, 9, 10, 11) ~ "Flanders",
+        3 ~ "Brussels",
+        c(2, 4, 5, 7, 8) ~ "Wallonia"
+      ) |>
+      factor(levels = c("Flanders", "Brussels", "Wallonia")),
+    living_situation = case_match(
+      remove_val_labels(living_situation),
+      c(1, 2) ~ "Alone",
+      c(3:11) ~ "With others"
+    ) |>
+      factor(levels = c("Alone", "With others")),
+    involvement = case_match(
+      remove_val_labels(involvement),
+      c(1, 2) ~ "Yes",
+      c(3:5) ~ "No"
+    ) |>
+      factor(levels = c("Yes", "No"))
+  ) |>
+  select(-birthyear, -province) |>
+  # Add labels to the variables
+  set_variable_labels(
+    id = "Participant",
+    gender = "Gender",
+    time_since_diag = "Time since diagnosis",
+    diagnosis = "Diagnosis",
+    age = "Age (years)",
+    region = "Region",
+    living_situation = "Living situation",
+    involvement = "Involvement in care"
+  )
+```
+
+```{r variable-data}
+# List all variable data set in "processed/subdata"
+data_files <- fs::dir_ls(here::here("data/processed/subdata"), glob = "*.rds")
+
+# Read all data files into a named list
+data_list <- lapply(data_files, readRDS)
+
+# Join each data to the group data
+df <- group
+for (i in seq_along(data_list)) {
+  df <- df |>
+    left_join(data_list[[i]], by = "id")
+}
+```
+
+```{r fn-tbl-single-var}
+tbl_sv <- function(data, group_var, var, var_lab) {
+  lab <- pull(group, {{ group_var }}) |> attr("label")
+  lab <- paste0("**", lab, "**")
+  data |>
+    set_variable_labels({{ var }} := var_lab) |>
+    tbl_summary(
+      by = {{ group_var }},
+      include = {{ var }},
+      type = everything() ~ "continuous2",
+      statistic = all_continuous2() ~
+        c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
+      digits = everything() ~ 1,
+      missing_text = "Missing"
+    ) |>
+    modify_spanning_header(all_stat_cols() ~ lab) |>
+    add_p() |>
+    as_flex_table() |>
+    width(j = 1, width = 5, unit = "cm") |>
+    width(j = -1, width = 3, unit = "cm")
+}
+```
+
+```{r fn-multiple-vars}
+tbl_mvs <- function(data, group_var, vars_match) {
+  lab <- pull(group, {{ group_var }}) |> attr("label")
+  lab <- paste0("**", lab, "**")
+  tbl_summary(
+    data = data,
+    by = {{ group_var }},
+    include = starts_with(vars_match),
+    type = everything() ~ "continuous2",
+    statistic = all_continuous2() ~
+      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
+    digits = everything() ~ 0,
+    missing_text = "Missing"
+  ) |>
+    modify_spanning_header(all_stat_cols() ~ lab) |>
+    add_p() |>
+    as_flex_table() |>
+    width(j = 1, width = 5, unit = "cm") |>
+    width(j = -1, width = 3, unit = "cm")
+}
+```
+
+# Table of content
+
+```{r toc}
+block_toc()
+```
+
+\newpage
+
+```{r, tab.id="tbl-patient-characteristics"}
+#| tab.cap = "Patient characteristics"
+
+tbl_summary(
+  group,
+  include = c(
+    gender,
+    time_since_diag,
+    diagnosis,
+    age,
+    region,
+    living_situation,
+    involvement
+  ),
+  missing_text = "Missing"
+) |>
+  as_flex_table()
+```
+
+\newpage
+
+# Health 
+
+## General health-related quality of life (HRQoL)
+
+```{r, tab.id="tbl-hrqol-time"}
+#| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by time since diagnosis"
+
+tbl_sv(
+  df,
+  time_since_diag,
+  eq5d5l_health_score,
+  "EQ-5D health score difference"
+)
+```
+
+\newpage
+
+```{r, tab.id="tbl-hrqol-diag"}
+#| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by diagnosis"
+
+tbl_sv(df, diagnosis, eq5d5l_health_score, "EQ-5D health score difference")
+```
+
+\newpage
+
+```{r, tab.id="tbl-hrqol-age"}
+#| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by age"
+
+tbl_sv(df, age, eq5d5l_health_score, "EQ-5D health score difference")
+```
+
+\newpage
+
+## Physical health 
+
+### Burden of physical symptoms
+
+```{r, tab.id="tbl-burden-phys-time"}
+#| tab.cap = "Burden of physical symptoms by time since diagnosis"
+
+tbl_mvs(df, time_since_diag, "HC5_SQ")
+```
+
+\newpage
+
+```{r, tab.id="tbl-burden-phys-diag"}
+#| tab.cap = "Burden of physical symptoms by diagnosis"
+
+tbl_mvs(df, diagnosis, "HC5_SQ")
+```
+
+\newpage
+
+### Pain/discomfort
+
+```{r, tab.id="tbl-pain-gender"}
+#| tab.cap = "Pain/discomfort by gender"
+
+tbl_sv(df, gender, eq5d5l_pain_discomfort, "Pain/discomfort")
+```
+
+\newpage
+
+## Psychological health
+
+### Burden of psychological symptoms 
+
+```{r, tab.id="tbl-burden-psych-time"}
+#| tab.cap = "Burden of psychological symptoms by time since diagnosis"
+
+df |>
+  labelled::remove_labels() |>
+  tbl_summary(
+    by = time_since_diag,
+    include = starts_with("H13_SQ"),
+    label = NULL,
+    type = everything() ~ "continuous2",
+    statistic = all_continuous2() ~
+      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
+    digits = everything() ~ 1,
+    missing_text = "Missing"
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+\newpage
+
+```{r, tab.id="tbl-burden-psych-diag"}
+#| tab.cap = "Burden of psychological symptoms by diagnosis"
+
+df |>
+  labelled::remove_labels() |>
+  tbl_summary(
+    by = age,
+    include = starts_with("H13_SQ"),
+    label = NULL,
+    type = everything() ~ "continuous2",
+    statistic = all_continuous2() ~
+      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
+    digits = everything() ~ 1,
+    missing_text = "Missing"
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+### Anxiety/depression
+
+```{r, tab.id="tbl-anxiety-gender"}
+#| tab.cap = "Anxiety/depression by gender"
+
+tbl_sv(df, gender, eq5d5l_anxiety_depression, "Anxiety/depression")
+```
+
+\newpage
+
+## Autonomy
+
+### Mobility
+
+```{r, tab.id="tbl-mobility-gender"}
+#| tab.cap = "Mobility by gender"
+
+tbl_sv(df, gender, eq5_mobility, "Mobility")
+```
+
+\newpage
+
+### Self-care
+
+```{r, tab.id="tbl-self-care-gender"}
+#| tab.cap = "Self-care by gender"
+
+tbl_sv(df, gender, eq5_self_care, "Self-care")
+```
+
+\newpage
+
+### Usual activities
+
+```{r, tab.id="tbl-usual-activities-gender"}
+#| tab.cap = "Usual activities by gender"
+
+tbl_sv(df, gender, eq5d5l_usual_activities, "Usual activities")
+```
+
+\newpage
+
+## Reproductive health 
+
+```{r, tab.id="tbl-reproductive-health-gender"}
+#| tab.cap = "Reproductive health by gender"
+
+tbl_sv(df, gender, reproductive_health, "Reproductive health")
+```
+
+\newpage
+
+## Sexual health 
+
+```{r, tab.id="tbl-sexual-health-gender"}
+#| tab.cap = "Sexual health by gender"
+
+tbl_sv(df, gender, sexual_health, "Reproductive health")
+```
+
+\newpage
+
+# Healthcare
+
+## Treatment use 
+
+```{r, tab.id="tbl-treatment-use-diag"}
+#| tab.cap = "Treatment use by time since diagnosis"
+
+df |>
+  tbl_summary(
+    by = time_since_diag,
+    include = starts_with("HC3_SQ"),
+    type = everything() ~ "dichotomous",
+    value = everything() ~ "1",
+    missing_text = "Missing"
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(width = 2, unit = "cm") |>
+  width(j = 1, width = 5, unit = "cm")
+```
+
+\newpage
+
+## Burden of the treatment 
+
+```{r, tab.id="tbl-burden-treatment-time"}
+#| tab.cap = "Burden of the treatment by time since diagnosis"
+
+df |>
+  tbl_summary(
+    by = time_since_diag,
+    include = starts_with("HC4_SQ"),
+    type = everything() ~ "dichotomous",
+    value = everything() ~ "1",
+    missing_text = "Missing"
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(width = 2, unit = "cm") |>
+  width(j = 1, width = 5, unit = "cm")
+```
+
+\newpage
+
+```{r, tab.id="tbl-burden-treatment-involvement"}
+#| tab.cap = "Burden of the treatment by involvement in treatment decisions"
+
+df |>
+  tbl_summary(
+    by = involvement,
+    include = starts_with("HC4_SQ"),
+    type = everything() ~ "dichotomous",
+    value = everything() ~ "1",
+    missing_text = "Missing"
+  ) |>
+  modify_spanning_header(
+    all_stat_cols() ~ "**Involvement in treatment decisions**"
+  ) |>
+  add_p() |>
+  as_flex_table() |>
+  width(width = 2, unit = "cm") |>
+  width(j = 1, width = 5, unit = "cm")
+```
+
+## Quality of care
+
+### Satisfaction with organization of care
+
+```{r, tab.id="tbl-satisfaction-organization-region"}
+#| tab.cap = "Satisfaction with organization of care by geographical region"
+
+tbl_sv(
+  df,
+  region,
+  HC7,
+  "Satisfaction with organization of care"
+)
+```
+
+### Recurence of same healthcare personel
+
+```{r, tab.id="tbl-reccurence-hcp-region"}
+#| tab.cap = "Recurence of same healthcare personel by geographical region"
+
+tbl_sv(
+  df,
+  region,
+  HC9,
+  "Recurence of same healthcare personel"
+)
+```
+
+### Statisfaction with information received from HCP
+
+```{r, tab.id="tbl-satisfaction-info-hcp-region"}
+#| tab.cap = "Satisfaction with information received from healthcare personel by geographical region"
+
+tbl_sv(
+  df,
+  region,
+  hcp_information_satisfaction,
+  "Satisfaction with information received from healthcare personel"
+)
+```
+
+### Involvement in treatment choice
+
+```{r, tab.id="tbl-trt-choice-involvement-region"}
+#| tab.cap = "Involvement in treatment choice by geographical region"
+
+tbl_sv(
+  df,
+  region,
+  treatment_choice_involvement,
+  "Involvement in treatment choice"
+)
+```
+
+## Diagnostic timing 
+
+### Time between first symptoms and decision to search care
+
+```{r, tbl.id="tbl-time-symptoms-decision-region"}
+#| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by region"
+
+tbl_summary(
+  df,
+  by = region,
+  include = time_to_symp,
+  label = time_to_symp ~
+    "Time between first symptoms and decision to search care",
+  missing_text = "Missing"
+) |>
+  add_p(
+    test = time_to_symp ~ "fisher.test",
+    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+```{r, tbl.id="tbl-time-symptoms-decision-gender"}
+#| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by gender"
+
+tbl_summary(
+  df,
+  by = gender,
+  include = time_to_symp,
+  label = time_to_symp ~
+    "Time between first symptoms and decision to search care",
+  missing_text = "Missing"
+) |>
+  add_p() |>
+  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+### Time between first appointment and diagnosis 
+
+```{r, tbl.id="tbl-time-first-app-diagnosis-region"}
+#| tab.cap = "Time between first symptoms and diagnosis (D13) by region"
+
+tbl_summary(
+  df,
+  by = region,
+  include = time_to_diagnosis,
+  label = time_to_diagnosis ~ "Time between first appointment and diagnosis",
+  missing_text = "Missing"
+) |>
+  add_p(
+    test = time_to_diagnosis ~ "fisher.test",
+    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+### Time between diagnosis and treatment
+
+```{r, tbl.id="tbl-time-diagnosis-treatment-region"}
+#| tab.cap = "Time between diagnosis and treatment (HC1) by region"
+
+tbl_summary(
+  df,
+  by = region,
+  include = time_to_hc,
+  label = time_to_hc ~ "Time between diagnosis and treatment",
+  missing_text = "Missing"
+) |>
+  add_p(
+    test = time_to_hc ~ "fisher.test",
+    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+## Accessibility of treatment
+
+### Forgone care
+
+```{r, tab.id="tbl-forgone-care-region"}
+#| tab.cap = "Forgone care by region"
+
+df |>
+  tbl_summary(
+    by = region,
+    include = starts_with("HC13_SQ"),
+    missing_text = "Missing"
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(width = 2, unit = "cm")
+```
+
+# Social 
+
+## Social support needs
+
+```{r, tab.id="tbl-social-support-region"}
+#| tab.cap = "Social support needs by region"
+
+df |>
+  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
+  tbl_summary(
+    by = region,
+    include = starts_with("S7_SQ")
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(width = 2, unit = "cm")
+```
+
+\newpage
+
+```{r, tab.id="tbl-social-support-gender"}
+#| tab.cap = "Social support needs by gender"
+
+df |>
+  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
+  tbl_summary(
+    by = gender,
+    include = starts_with("S7_SQ")
+  ) |>
+  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
+  add_p() |>
+  as_flex_table() |>
+  width(width = 2, unit = "cm")
+```
+
+\newpage
+
+## Social connection needs
+
+```{r, tab.id="tbl-impact-personal-relations-gender"}
+#| tab.cap = "Impact on personal relations by gender"
+
+tbl_sv(df, gender, impact_personal_relations, "Impact on personal relations")
+```
+
+\newpage
+
+```{r, tab.id="tbl-impact-personal-relations-age"}
+#| tab.cap = "Impact on personal relations by age"
+
+tbl_sv(df, age, impact_personal_relations, "Impact on personal relations")
+```
+
+\newpage
+
+## Education 
+
+```{r, tab.id="tbl-impact-education-gender"}
+#| tab.cap = "Impact on education by gender"
+
+tbl_sv(df, gender, impact_education, "Impact on education")
+```
+
+\newpage
+
+## Work 
+
+### Impact on work intensity 
+
+```{r, tab.id="tbl-impact-work-gender"}
+#| tab.cap = "Impact on work intensity by time since diagnosis"
+
+tbl_summary(
+  df,
+  by = time_since_diag,
+  include = impact_work,
+  label = list(impact_work = "Impact on work intensity"),
+  missing_text = "Missing"
+) |>
+  add_p() |>
+  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+\newpage
+
+```{r, tab.id="tbl-impact-work-age"}
+#| tab.cap = "Impact on work intensity by living situation"
+
+tbl_summary(
+  df,
+  by = living_situation,
+  include = impact_work,
+  label = list(impact_work = "Impact on work intensity"),
+  missing_text = "Missing"
+) |>
+  add_p() |>
+  modify_spanning_header(all_stat_cols() ~ "**Living situation**") |>
+  as_flex_table() |>
+  width(j = 1, width = 5, unit = "cm") |>
+  width(j = -1, width = 3, unit = "cm")
+```
+
+\newpage
+
+### Time of incapacity to work
+
+## Financial consequences
+
+```{r, tab.id="tbl-impact-financial-living-situation"}
+#| tab.cap = "Impact on financial situation by living situation"
+
+tbl_sv(
+  df,
+  living_situation,
+  impact_financial_situation,
+  "Impact on financial situation"
+)
+```
+
+\newpage
+
+```{r, tab.id="tbl-impact-financial-time-since-diag"}
+#| tab.cap = "Impact on financial situation by time since diagnosis"
+
+tbl_sv(
+  df,
+  time_since_diag,
+  impact_financial_situation,
+  "Impact on financial situation"
+)
+```
