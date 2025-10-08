@@ -21,7 +21,7 @@ caption <- "Clinical features of psychotic disorders"
 
 # Data ---------------------------------------------------------------------------
 
-data <- read_rds("data/processed/data_fr.rds")
+data <- read_rds("data/processed/data_current.rds")
 
 # Subset data and patients of interest
 df <- data |>

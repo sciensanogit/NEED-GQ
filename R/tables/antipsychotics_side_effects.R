@@ -23,7 +23,7 @@ caption <- "List of antipsychotics and their side effects (non-exhaustive)"
 # Data ---------------------------------------------------------------------------
 
 # Read full data
-data <- read_rds("data/processed/data_fr.rds")
+data <- read_rds("data/processed/data_current.rds")
 
 # Subset drug information
 drug <- data |>
@@ -71,14 +71,15 @@ df_count_lbl <- df_count |>
   rename(side_effect_label = label)
 
 # Save side effects info in a separate sub data set
-side_effects_long |> 
-  filter(value == 1) |> 
-  set_value_labels(value = NULL) |> 
-  pivot_wider(names_from = side_effect, values_from = value, values_fill = 0) |> 
+side_effects_long |>
+  filter(value == 1) |>
+  set_value_labels(value = NULL) |>
+  pivot_wider(names_from = side_effect, values_from = value, values_fill = 0) |>
   set_variable_labels(
-    .labels = as.list(side_effect_lbl$label) |> setNames(side_effect_lbl$variable),
+    .labels = as.list(side_effect_lbl$label) |>
+      setNames(side_effect_lbl$variable),
     .strict = FALSE
-  ) |> 
+  ) |>
   saveRDS("data/processed/subdata/side_effects.rds")
 
 # Create table -------------------------------------------------------------------

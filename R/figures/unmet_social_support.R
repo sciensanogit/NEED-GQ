@@ -16,7 +16,7 @@ purrr::walk(list.files("R/functions", full.names = TRUE), source)
 
 # Load data ----------------------------------------------------------------------
 
-data <- read_rds("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset included patients and relevant variables
 df <- data |>

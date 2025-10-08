@@ -20,7 +20,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Load and modify the data -------------------------------------------------------
 
 # Original data
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset patients that finished the survey and impact questions and pivot to long
 # format and label the answers

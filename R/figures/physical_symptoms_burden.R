@@ -21,7 +21,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Load and modify the data -------------------------------------------------------
 
 # Original data
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset to relevant columns and filter to last survey only
 df <- data |>
@@ -64,8 +64,8 @@ df_long |>
 
 # Count the number of responses per symptom and level of burden
 df_long <- df_long |>
-  count(variable, response) |>
-  mutate(total = sum(n), .by = variable)
+  count(response, label) |>
+  mutate(total = sum(n), .by = label)
 
 n_total <- nrow(df)
 

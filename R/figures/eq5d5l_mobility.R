@@ -21,7 +21,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Load and modify the data -------------------------------------------------------
 
 # Original data
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset patients that finished the survey and EQ-5D-5L questions and pivot to long
 # format and label the time points

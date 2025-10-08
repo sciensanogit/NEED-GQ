@@ -17,7 +17,7 @@ library(flextable)
 # Load the data ------------------------------------------------------------------
 
 # Load the full data set
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset to demographics variables only
 df <- data |>

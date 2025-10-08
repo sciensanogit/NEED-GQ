@@ -23,7 +23,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Load and modify the data -------------------------------------------------------
 
 # Original data
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset and modify the data
 df <- data |>
@@ -61,7 +61,7 @@ df_long <- df |>
   )
 
 # Save subdata to file
-df_long |> 
+df_long |>
   mutate(
     answer_num = as.numeric(answer) - 2,
     answer_num = ifelse(answer_num < 0, NA, answer_num),
@@ -71,11 +71,11 @@ df_long |>
       "Reproductive life" ~ "reproductive_health"
     )
   ) |>
-  select(-answer) |> 
+  select(-answer) |>
   pivot_wider(
     names_from = question,
     values_from = answer_num
-  ) |> 
+  ) |>
   saveRDS("data/processed/subdata/impact_sexual_reproductive_health.rds")
 
 # Make into a count table

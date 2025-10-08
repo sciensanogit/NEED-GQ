@@ -22,7 +22,7 @@ caption <- "Self-reported treatment per diagnosis."
 
 # Load the data -----------------------------------------------------------
 
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset treatments variables
 trt <- data |>
@@ -70,9 +70,11 @@ df_count_lbl <- df |>
   rename(diagnosis_label = label)
 
 # Save treatment info in a separate sub data set
-trt_long |> 
-  pivot_wider(names_from = treatment, values_from = value, values_fill = 0) |> 
-  set_variable_labels(.labels = as.list(trt_lbl$label) |> setNames(trt_lbl$variable)) |> 
+trt_long |>
+  pivot_wider(names_from = treatment, values_from = value, values_fill = 0) |>
+  set_variable_labels(
+    .labels = as.list(trt_lbl$label) |> setNames(trt_lbl$variable)
+  ) |>
   saveRDS("data/processed/subdata/treatment_by_diagnosis.rds")
 
 # Create table -------------------------------------------------------------------

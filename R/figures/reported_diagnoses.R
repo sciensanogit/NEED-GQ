@@ -19,7 +19,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Load the data ------------------------------------------------------------------
 
 # Original data
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset to relevant variables and patients who reached last page (16)
 df <- data |>

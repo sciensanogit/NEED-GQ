@@ -18,7 +18,7 @@ library(flextable)
 # Data ---------------------------------------------------------------------------
 
 # Load the full data set
-data <- readRDS("data/processed/data_fr.rds")
+data <- readRDS("data/processed/data_current.rds")
 
 # Subset to EQ-5D-5L utility score only
 df <- data |>
