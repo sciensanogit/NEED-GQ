@@ -2,6 +2,16 @@
 
 This repository contains the code and resources for the NEED project.
 
+## Dependencies
+
+To ensure that the project functions, please use R 4.4.2 and use the packages and their version listed in the DESCRIPTION file.
+
+To  automatically update the pacakge to the minimum required version, please use:
+
+```{r}
+remotes::install_deps()
+```
+
 ## Structure
 
 The current structure of the repository is as follows:
