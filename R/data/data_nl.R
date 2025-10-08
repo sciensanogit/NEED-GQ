@@ -62,19 +62,17 @@ data[, 8] <- factor(
   levels = c(1, 2),
   labels = c(
     "Voor uzelf",
-    "Voor een andere volwassene. (De persoon die u vertegenwoordigt is momenteel niet in staat om de vragenlijst zelf in te vullen.)"
+    "Voor een andere persoon van wie u de wettelijke vertegenwoordiger bent. (De persoon die u vertegenwoordigt is niet in staat om zelf te antwoorden)"
   )
 )
 names(data)[8] <- "D1"
 # LimeSurvey Field type: A
 data[, 9] <- as.character(data[, 9])
-attributes(data)$variable.labels[
-  9
-] <- "Vanaf nu vragen wij u om alle vragen te beantwoorden alsof u de persoon bent die aan de ziekte lijdt. Geef \"ik weet het niet\" aan als u niet weet hoe de persoon zou antwoorden."
+attributes(data)$variable.labels[9] <- "Vanaf nu vragen we om alle vragen te beantwoorden alsof u de persoon bent met de psychotische stoornis. Duid \"ik weet het niet\" aan als u niet weet hoe de persoon zou antwoorden."
 names(data)[9] <- "D1b"
 # LimeSurvey Field type: A
 data[, 10] <- as.character(data[, 10])
-attributes(data)$variable.labels[10] <- "Met welk gender identificeert u zich?"
+attributes(data)$variable.labels[10] <- "Met welk geslacht identificeert u zich?"
 data[, 10] <- factor(
   data[, 10],
   levels = c("A1", "A2", "A3"),
@@ -85,12 +83,19 @@ names(data)[10] <- "D2"
 data[, 11] <- as.numeric(data[, 11])
 attributes(data)$variable.labels[11] <- "Wat is uw geboortejaar?"
 names(data)[11] <- "D3"
-# LimeSurvey Field type: F
-data[, 12] <- as.numeric(data[, 12])
-attributes(data)$variable.labels[12] <- "In welke provincie woont u?"
-data[, 12] <- factor(
-  data[, 12],
-  levels = c(001, 002, 003, 004, 005, 006, 007, 008, 009, 010, 011, 012, 013),
+# LimeSurvey Field type: A
+data[, 12] <- as.character(data[, 12])
+attributes(data)$variable.labels[12] <- "Bedankt voor uw deelname. Helaas komt u niet in aanmerking om aan dit onderzoek deel te nemen."
+names(data)[12] <- "END0"
+# LimeSurvey Field type: A
+data[, 13] <- as.character(data[, 13])
+attributes(data)$variable.labels[13] <- "In welke provincie woont u?"
+data[, 13] <- factor(
+  data[, 13],
+  levels = c(
+    "A1","A2","A3","A4","A5","A6","A7","A8",
+    "AO09","AO10","AO11","AO12","AO13"
+  ),
   labels = c(
     "Antwerpen",
     "Waals-Brabant",
@@ -107,21 +112,17 @@ data[, 12] <- factor(
     "Ik weet het niet"
   )
 )
-names(data)[12] <- "D4"
-# LimeSurvey Field type: A
-data[, 13] <- as.character(data[, 13])
-attributes(data)$variable.labels[
-  13
-] <- "Hartelijk dank om deze vragenlijst in te vullen. Helaas komt u niet in aanmerking om verder deel te nemen aan dit onderzoek. Indien u interesse heeft in de resultaten van dit onderzoek, zullen deze gepubliceerd worden op de website [website] [wanneer]."
-names(data)[13] <- "END1"
+names(data)[13] <- "D4"
 # LimeSurvey Field type: A
 data[, 14] <- as.character(data[, 14])
-attributes(data)$variable.labels[
-  14
-] <- "Wat is het hoogste diploma of opleidingsniveau dat u tot nu toe heeft behaald?"
-data[, 14] <- factor(
-  data[, 14],
-  levels = c("001", "002", "003", "004", "005", "006", "008"),
+attributes(data)$variable.labels[14] <- "Bedankt voor uw deelname. Helaas komt u niet in aanmerking om aan dit onderzoek deel te nemen."
+names(data)[14] <- "END1"
+# LimeSurvey Field type: A
+data[, 15] <- as.character(data[, 15])
+attributes(data)$variable.labels[15] <- "Wat is het hoogste diploma of opleidingsniveau dat u tot nu toe hebt behaald?"
+data[, 15] <- factor(
+  data[, 15],
+  levels = c("A1","A2","A3","A4","A5","A6","A7"),
   labels = c(
     "Geen diploma of lager onderwijs",
     "Lager secundair onderwijs",
@@ -132,51 +133,326 @@ data[, 14] <- factor(
     "Ik weet het niet"
   )
 )
-names(data)[14] <- "D5"
+names(data)[15] <- "D5"
 # LimeSurvey Field type: A
-data[, 15] <- as.character(data[, 15])
-attributes(data)$variable.labels[
-  15
-] <- "[Anders] Wat is het hoogste diploma of opleidingsniveau dat u tot nu toe heeft behaald?"
-names(data)[15] <- "D5_other"
-# LimeSurvey Field type: F
-data[, 16] <- as.numeric(data[, 16])
-attributes(data)$variable.labels[16] <- "[Alleen] U woont…"
-data[, 16] <- factor(
-  data[, 16],
-  levels = c(1, 0),
-  labels = c("Ja", "Niet geselecteerd")
-)
-names(data)[16] <- "D6_SQ001"
-# LimeSurvey Field type: F
-data[, 17] <- as.numeric(data[, 17])
-attributes(data)$variable.labels[17] <- "[Alleen met kind(eren)] U woont…"
+data[, 16] <- as.character(data[, 16])
+attributes(data)$variable.labels[16] <- "[Anders] Wat is het hoogste diploma of opleidingsniveau dat u tot nu toe hebt behaald?"
+names(data)[16] <- "D5_other"
+# LimeSurvey Field type: A
+data[, 17] <- as.character(data[, 17])
+attributes(data)$variable.labels[17] <- "U woont …"
 data[, 17] <- factor(
   data[, 17],
-  levels = c(1, 0),
-  labels = c("Ja", "Niet geselecteerd")
+  levels = c("AO01","AO02","AO03","AO04","AO05","AO06","AO07","AO08","AO09","AO10","AO11","AO12"),
+  labels = c(
+    "Alleen",
+    "Alleen met kind(eren)",
+    "In een relatie (zonder kinderen)",
+    "In een relatie (met kinderen)",
+    "Bij een of beide ouders",
+    "In een gedeeld appartement of woning",
+    "In een psychiatrisch verzorgingstehuis",
+    "In een beschut wonen-project",
+    "In begeleid wonen",
+    "In het ziekenhuis (tijdelijk)",
+    "In een rusthuis",
+    "Ik weet het niet"
+  )
 )
-names(data)[17] <- "D6_SQ002"
-# LimeSurvey Field type: F
-data[, 18] <- as.numeric(data[, 18])
-attributes(data)$variable.labels[
-  18
-] <- "[Samenwonend (zonder kinderen)] U woont…"
-data[, 18] <- factor(
-  data[, 18],
-  levels = c(1, 0),
-  labels = c("Ja", "Niet geselecteerd")
-)
-names(data)[18] <- "D6_SQ003"
-# LimeSurvey Field type: F
-data[, 19] <- as.numeric(data[, 19])
-attributes(data)$variable.labels[19] <- "[Samenwonend (met kinderen)] U woont…"
+names(data)[17] <- "D6"
+# LimeSurvey Field type: A
+data[, 18] <- as.character(data[, 18])
+attributes(data)$variable.labels[18] <- "[Anders] U woont …"
+names(data)[18] <- "D6_other"
+# LimeSurvey Field type: A
+data[, 19] <- as.character(data[, 19])
+attributes(data)$variable.labels[19] <- "Wat is uw geboorteland?"
 data[, 19] <- factor(
   data[, 19],
-  levels = c(1, 0),
-  labels = c("Ja", "Niet geselecteerd")
+  levels = c("A1", "A2", "A3"),
+  labels = c("België", "Ander land", "Ik weet het niet")
 )
-names(data)[19] <- "D6_SQ004"
+names(data)[19] <- "D7"
+# LimeSurvey Field type: A
+data[, 20] <- as.character(data[, 20])
+attributes(data)$variable.labels[20] <- "Selecteer het betreffende land"
+data[, 20] <- factor(
+  data[, 20],
+  levels = c(
+    "A1","A2","A3","A4","A5","A6","A7","A8","A9","A10",
+    "A11","A12","A13","A14","A15","A16","A17","A18","A19","A20",
+    "A21","A22","A23","A24","A25","A26","A27","A28","A29","A30",
+    "A31","A32","A33","A34","A35","A36","A37","A38","A39","A40",
+    "A41","A42","A43","A44","A45","A46","A47","A48","A49","A50",
+    "A51","A52","A53","A54","A55","A56","A57","A58","A59","A60",
+    "A61","A62","A63","A64","A65","A66","A67","A68","A69","A70",
+    "A71","A72","A73","A74","A75","A76","A77","A78","A79","A80",
+    "A81","A82","A83","A84","A85","A86","A87","A88","A89","A90",
+    "A91","A92","A93","A94","A95","A96","A97","A98","A99","A100",
+    "A101","A102","A103","A104","A105","A106","A107","A108","A109","A110",
+    "A111","A112","A113","A114","A115","A116","A117","A118","A119","A120",
+    "A121","A122","A123","A124","A125","A126","A127","A128","A129","A130",
+    "A131","A132","A133","A134","A135","A136","A137","A138","A139","A140",
+    "A141","A142","A143","A144","A145","A146","A147","A148","A149","A150",
+    "A151","A152","A153","A154","A155","A156","A157","A158","A159","A160",
+    "A161","A162","A163","A164","A165","A166","A167","A168","A169","A170",
+    "A171","A172","A173","A174","A175","A176","A177","A178","A179","A180",
+    "A181","A182","A183","A184","A185","A186","A187","A188","A189","A190",
+    "A191","A192","A193","A194","A195","A196","A197","A198","A199","A200",
+    "A201","A202","A203","A204","A205","A206","A207","A208","A209","A210",
+    "A211","A212","A213","A214","A215","A216","A217","A218","A219","A220",
+    "A221","A222","A223","A224","A225","A226","A227","A228","A229","A230",
+    "A231","A232","A233","A234","A235","A236"
+  ),
+  labels = c(
+    "Afghanistan",
+    "Zuid-Afrika",
+    "Albanië",
+    "Algerije",
+    "Duitsland",
+    "Andorra",
+    "Angola",
+    "Anguilla",
+    "Antarctica",
+    "Antigua en Barbuda",
+    "Saoedi-Arabië",
+    "Argentinië",
+    "Armenië",
+    "Aruba",
+    "Australië",
+    "Oostenrijk",
+    "Azerbeidzjan",
+    "Bahama’s",
+    "Bahrein",
+    "Bangladesh",
+    "Barbados",
+    "Belize",
+    "Benin",
+    "Bermuda",
+    "Bhutan",
+    "Wit-Rusland",
+    "Bolivia",
+    "Bonaire",
+    "Bosnië en Herzegovina",
+    "Botswana",
+    "Brazilië",
+    "Brunei",
+    "Bulgarije",
+    "Burkina Faso",
+    "Burundi",
+    "Cambodja",
+    "Kameroen",
+    "Canada",
+    "Kaapverdië",
+    "Chili",
+    "China",
+    "Cyprus",
+    "Colombia",
+    "Comoren",
+    "Congo (Brazzaville)",
+    "Congo (Democratische Republiek)",
+    "Noord-Korea",
+    "Zuid-Korea",
+    "Costa Rica",
+    "Ivoorkust",
+    "Kroatië",
+    "Cuba",
+    "Curaçao",
+    "Denemarken en Faeröer",
+    "Djibouti",
+    "Dominica",
+    "Egypte",
+    "El Salvador",
+    "Verenigde Arabische Emiraten",
+    "Ecuador",
+    "Eritrea",
+    "Spanje en Canarische Eilanden",
+    "Estland",
+    "eSwatini (Swaziland)",
+    "Verenigde Staten van Amerika",
+    "Ethiopië",
+    "Fiji",
+    "Finland",
+    "Frankrijk",
+    "Gabon",
+    "Gambia",
+    "Georgië",
+    "Ghana",
+    "Gibraltar",
+    "Griekenland",
+    "Grenada",
+    "Groenland",
+    "Guadeloupe",
+    "Guam",
+    "Guatemala",
+    "Guinee-Bissau",
+    "Guinee (Conakry)",
+    "Equatoriaal-Guinea",
+    "Guyana",
+    "Frans-Guyana",
+    "Haïti",
+    "Honduras",
+    "Hongkong",
+    "Hongarije",
+    "Christmaseiland",
+    "Kaaimaneilanden",
+    "Cookeilanden",
+    "Falklandeilanden",
+    "Marshalleilanden",
+    "Salomonseilanden",
+    "Amerikaanse Maagdeneilanden",
+    "Britse Maagdeneilanden",
+    "India",
+    "Indonesië",
+    "Irak",
+    "Iran",
+    "Ierland",
+    "IJsland",
+    "Israël",
+    "Italië",
+    "Jamaica",
+    "Japan",
+    "Jordanië",
+    "Kazachstan",
+    "Kenia",
+    "Kirgizië",
+    "Kiribati",
+    "Kosovo",
+    "Koeweit",
+    "Laos",
+    "Lesotho",
+    "Letland",
+    "Libanon",
+    "Liberia",
+    "Libië",
+    "Liechtenstein",
+    "Litouwen",
+    "Luxemburg",
+    "Macao (China)",
+    "Noord-Macedonië",
+    "Madagaskar",
+    "Maleisië",
+    "Malawi",
+    "Maldiven",
+    "Mali",
+    "Malta",
+    "Noordelijke Marianen (VS)",
+    "Marokko",
+    "Martinique",
+    "Mauritius",
+    "Mauritanië",
+    "Mayotte",
+    "Mexico",
+    "Micronesië",
+    "Moldavië",
+    "Monaco",
+    "Mongolië",
+    "Montenegro",
+    "Montserrat",
+    "Mozambique",
+    "Myanmar",
+    "Namibië",
+    "Nauru",
+    "Nepal",
+    "Nicaragua",
+    "Niger",
+    "Nigeria",
+    "Niue",
+    "Noorwegen",
+    "Nieuw-Caledonië",
+    "Nieuw-Zeeland",
+    "Oman",
+    "Oeganda",
+    "Oezbekistan",
+    "Pakistan",
+    "Palau",
+    "Palestina",
+    "Panama",
+    "Papoea-Nieuw-Guinea",
+    "Paraguay",
+    "Nederland",
+    "Peru",
+    "Filipijnen",
+    "Pitcairneilanden",
+    "Polen",
+    "Frans-Polynesië",
+    "Puerto Rico",
+    "Portugal, Azoren, Madeira",
+    "Qatar",
+    "Centraal-Afrikaanse Republiek",
+    "Dominicaanse Republiek",
+    "Tsjechië",
+    "Réunion",
+    "Roemenië",
+    "Verenigd Koninkrijk",
+    "Rusland",
+    "Rwanda",
+    "Westelijke Sahara",
+    "Saint-Barthélemy",
+    "Saint Kitts en Nevis",
+    "Sint-Eustatius en Saba",
+    "San Marino",
+    "Saint-Martin (Frankrijk)",
+    "Sint-Maarten (Nederland)",
+    "Saint-Pierre en Miquelon",
+    "Saint Vincent en de Grenadines",
+    "Sint-Helena, Tristan Da Cunha, Ascension",
+    "Saint Lucia",
+    "Samoa",
+    "Amerikaans-Samoa",
+    "Sao Tomé en Principe",
+    "Senegal",
+    "Servië",
+    "Seychellen",
+    "Sierra Leone",
+    "Singapore",
+    "Slowakije",
+    "Slovenië",
+    "Somalië",
+    "Soedan",
+    "Zuid-Soedan",
+    "Sri Lanka",
+    "Zweden",
+    "Zwitserland",
+    "Suriname",
+    "Syrië",
+    "Tadzjikistan",
+    "Taiwan",
+    "Tanzania",
+    "Tsjaad",
+    "Thailand",
+    "Oost-Timor",
+    "Togo",
+    "Tokelau",
+    "Tonga",
+    "Trinidad en Tobago",
+    "Tunesië",
+    "Turkmenistan",
+    "Turks- en Caicoseilanden",
+    "Turkije",
+    "Tuvalu",
+    "Oekraïne",
+    "Uruguay",
+    "Vanuatu",
+    "Venezuela",
+    "Vietnam",
+    "Wallis en Futuna",
+    "Jemen",
+    "Zambia",
+    "Zimbabwe",
+    "Ik weet het niet"
+  )
+)
+names(data)[20] <- "D8"
+
+
+
+
+
+
+
+
+
 # LimeSurvey Field type: F
 data[, 20] <- as.numeric(data[, 20])
 attributes(data)$variable.labels[20] <- "[Bij een of beide ouders] U woont…"
