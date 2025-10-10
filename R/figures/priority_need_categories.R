@@ -4,6 +4,7 @@
 #' Purpose      :
 #' Files created: - `results/figures/png/priority_need_categories.png`
 #'                - `results/figures/pptx/priority_need_categories.pptx`
+#'                - `data/processed/subdata/priority_need_categories.rds`
 #' Edits        :
 
 # Packages ----------------------------------------------------------------
@@ -23,7 +24,8 @@ data <- readRDS("data/processed/data_current.rds")
 # Subset the data and select the relevant variables
 df <- data |>
   filter(included == 1L) |>
-  select(id, starts_with("P1"))
+  select(id, starts_with("P1")) |>
+  filter(!if_all(starts_with("P1"), is.na)) # Keep only those with at least one non-missing answer
 
 # Obtain labels
 labs <- get_labels(df, include = -id) |>
@@ -58,6 +60,11 @@ df_long <- df |>
     n_ordering = sum(as.numeric(answer) %in% c(5, 6)),
     .by = c(label)
   )
+
+# Save the long data for later us
+df_long |>
+  select(id, priority = answer) |>
+  saveRDS("data/processed/subdata/priority_need_categories.rds")
 
 # Count the number of responses per category and answer
 df_count <- df_long |>

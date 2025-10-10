@@ -26,7 +26,7 @@ data <- readRDS("data/processed/data_current.rds")
 df <- data |>
   filter(included == 1L) |>
   select(id, HC7, HC9) |>
-  filter(if_any(c(HC7, HC9), ~ !is.na(.)))
+  filter(!if_all(matches("^HC.+$"), is.na)) # Remove rows with all missing values
 
 # Get labels of the variables
 labs <- df |>

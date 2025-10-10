@@ -1,11 +1,10 @@
-#' Name         : impact_financial_situation.R
+#' Name         : social_impact_caregivers.R
 #' Author       : Alexandre Bohyn
-#' Date         : September 15, 2025
-#' Purpose      :
-#' Files created: - `results/figures/png/impact_financial_situation.png`
-#'                - `results/figures/pptx/impact_financial_situation.pptx`
-#'               - `data/processed/subdata/impact_financial_situation.rds`
+#' Date         : 10 October 2025
+#' Purpose      : description
+#' Files created: `output/figures/social_impact_caregivers.png/pdf`
 #' Edits        :
+#'  - 10 October 2025: Created file.
 
 # Packages ----------------------------------------------------------------
 
@@ -22,12 +21,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 data <- readRDS("data/processed/data_current.rds")
 
 # Subset and modify the data
-df_long <- pivot_impact_data(data, var = "S5")
-
-# Save the intermediate data
-df_long |>
-  select(id, impact_financial_situation = answer_num) |>
-  saveRDS("data/processed/subdata/impact_financial_situation.rds")
+df_long <- pivot_impact_data(data, var = "CG7")
 
 # Summarize the number of respondents per answer
 df <- summarize_impact_data(df_long)
@@ -35,7 +29,7 @@ df <- summarize_impact_data(df_long)
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Impact of the psychosis disorder on the financial situation (N={unique(df$total)})"
+  "Impact of the caregiver role on social life (N={unique(df$total)})"
 )
 
 # Create the figure --------------------------------------------------------
@@ -46,7 +40,7 @@ fig <- plot_impact_data(df, caption = caption)
 
 # Save to png
 ggsave(
-  filename = "results/figures/png/impact_financial_situation.png",
+  filename = "results/figures/png/social_impact_caregivers.png",
   plot = fig,
   width = 8,
   height = 6,
@@ -56,6 +50,6 @@ ggsave(
 # Save to powerpoint
 create_pptx(
   ggobj = fig,
-  path = "results/figures/pptx/impact_financial_situation.pptx",
+  path = "results/figures/pptx/social_impact_caregivers.pptx",
   overwrite = TRUE
 )

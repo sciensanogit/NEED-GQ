@@ -42,7 +42,7 @@ plot_impact_data <- function(df, caption) {
     geom_text(aes(label = label), vjust = -0.5, size = 5) +
     labs(
       x = NULL,
-      y = "Number of patients",
+      y = "Number of respondents",
       title = stringr::str_wrap(caption, width = 60),
     ) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.3))) +

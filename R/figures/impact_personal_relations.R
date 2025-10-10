@@ -29,7 +29,7 @@ df_long |>
   select(id, impact_personal_relations = answer_num) |>
   saveRDS("data/processed/subdata/impact_personal_relations.rds")
 
-# Summarize the number of patients per answer
+# Summarize the number of respondents per answer
 df <- summarize_impact_data(df_long)
 
 # Define caption -----------------------------------------------------------------

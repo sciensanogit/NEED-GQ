@@ -18,10 +18,11 @@ purrr::walk(list.files("R/functions", full.names = TRUE), source)
 
 data <- readRDS("data/processed/data_current.rds")
 
-# Subset included patients and relevant variables
+# Subset included respondents and relevant variables
 df <- data |>
   filter(included == 1L) |>
-  select(id, matches("S7_SQ*"))
+  select(id, matches("S7_SQ*")) |>
+  filter(!if_all(matches("S7_SQ*"), is.na))
 
 # Retrieve labels
 lbl_list <- map_chr(df[, -1], function(x) attr(x, "label")) |>

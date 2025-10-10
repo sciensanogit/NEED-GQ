@@ -22,7 +22,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Original data
 data <- readRDS("data/processed/data_current.rds")
 
-# Subset patients that finished the survey and EQ-5D-5L questions and pivot to long
+# Subset respondents that finished the survey and EQ-5D-5L questions and pivot to long
 # format and label the time points
 df_long <- pivot_eq5d5l_data(data, "H4", "H10")
 

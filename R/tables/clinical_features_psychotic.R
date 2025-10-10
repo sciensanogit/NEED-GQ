@@ -23,7 +23,7 @@ caption <- "Clinical features of psychotic disorders"
 
 data <- read_rds("data/processed/data_current.rds")
 
-# Subset data and patients of interest
+# Subset data and respondents of interest
 df <- data |>
   filter(included == 1L) |>
   select(id, matches("HC13_SQ.+")) |>

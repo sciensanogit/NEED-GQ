@@ -1,13 +1,10 @@
-#' Name         : physical_symptoms_burden.R
+#' Name         : side_effects_burden.R
 #' Author       : Alexandre Bohyn
-#' Date         : September 12, 2025
-#' Purpose      : Bar chart of physical symptoms burden using variables HC5_SQ to define
-#'               the symptoms. The burden is defined on a Likert scale.
-#'               Using the French dataset.
-#' Files created: - `results/figures/png/physical_symptoms_burden.png`
-#'                - `results/figures/pptx/physical_symptoms_burden.pptx`
-#'                - `data/processed/subdata/physical_symptoms_burden.rds`
+#' Date         : 10 October 2025
+#' Purpose      : description
+#' Files created: `output/figures/side_effects_burden.png/pdf`
 #' Edits        :
+#'  - 10 October 2025: Created file.
 
 # Packages ----------------------------------------------------------------
 
@@ -26,7 +23,8 @@ data <- readRDS("data/processed/data_current.rds")
 # Subset to relevant columns and filter to last survey only
 df <- data |>
   filter(included == 1L) |>
-  select(id, matches("^HC5_SQ\\d+$"))
+  select(id, matches("^HC5_SQ\\d+$")) |>
+  filter(!if_all(matches("^HC5_SQ\\d+$"), is.na)) # Remove rows with all missing values
 # Setting the Likert scale as an ordered factor
 # mutate(across(starts_with("HC5_SQ"), ~to_factor(.x)))
 
@@ -85,7 +83,7 @@ n_total <- nrow(df)
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Frequency, distribution and level of burden of physical symptoms reported by respondents (N={n_total})"
+  "Distribution of reported side-effects by level of burden (N={n_total})"
 )
 
 # Create the figure --------------------------------------------------------
@@ -93,15 +91,20 @@ caption <- glue(
 # Create a data set with the total number of responses per symptom
 totals_df <- df_long |>
   distinct(total, label) |>
-  mutate(n = total, response = NA)
+  mutate(
+    n = total,
+    response = NA,
+    perc = round(100 * n / n_total, 1),
+    txt_label = glue::glue("{n} ({perc}%)")
+  )
 
 fig <- df_long |>
   ggplot(aes(x = n, y = reorder(label, total), fill = response)) +
   geom_col(position = "stack") +
-  geom_text(data = totals_df, aes(label = n), hjust = -0.25, size = 5) +
+  geom_text(data = totals_df, aes(label = txt_label), hjust = -0.25, size = 4) +
   scale_x_continuous(
     breaks = scales::breaks_width(width = 10),
-    expand = expansion(mult = c(0, 0.1))
+    expand = expansion(mult = c(0, 0.3))
   ) +
   scale_fill_manual(
     name = "",
@@ -134,7 +137,7 @@ fig <- df_long |>
 
 # Save to png
 ggsave(
-  filename = "results/figures/png/physical_symptoms_burden.png",
+  filename = "results/figures/png/side_effects_burden.png",
   plot = fig,
   width = 8,
   height = 8,
@@ -144,7 +147,7 @@ ggsave(
 # Save to powerpoint
 create_pptx(
   ggobj = fig,
-  path = "results/figures/pptx/physical_symptoms_burden.pptx",
+  path = "results/figures/pptx/side_effects_burden.pptx",
   width = 8,
   height = 8,
   overwrite = TRUE

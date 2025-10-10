@@ -21,7 +21,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Original data
 data <- readRDS("data/processed/data_current.rds")
 
-# Subset to relevant variables and patients who reached last page (16)
+# Subset to relevant variables and respondents who reached last page (16)
 df <- data |>
   filter(included == 1L) |>
   select(id, starts_with("DSD1_A"))

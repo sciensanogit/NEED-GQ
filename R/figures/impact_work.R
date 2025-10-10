@@ -2,7 +2,7 @@
 #' Author       : Alexandre Bohyn
 #' Date         : September 15, 2025
 #' Purpose      : Figure of the number of months/years the patient could not work
-#'                because of their illness. There are 2 patients with abnormal values:
+#'                because of their illness. There are 2 respondents with abnormal values:
 #'                one with 2012 years, the other with 320. They are excluded from the
 #'                figure.
 #' Files created: - `results/figures/png/impact_work.png`
@@ -122,7 +122,7 @@ fig1 <- df_s2 |>
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 4) +
   scale_y_continuous(
-    name = "Number of patients",
+    name = "Number of respondents",
     expand = expansion(mult = c(0, 0.3))
   ) +
   labs(title = caption, subtitle = str_wrap(caption_s2, 70), x = NULL) +
@@ -151,7 +151,7 @@ caption_s3 <- glue(
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 4) +
   scale_y_continuous(
-    name = "Number of patients",
+    name = "Number of respondents",
     expand = expansion(mult = c(0, 0.3))
   ) +
   labs(title = caption, subtitle = str_wrap(caption_s3, 70), x = NULL) +

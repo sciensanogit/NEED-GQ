@@ -21,7 +21,7 @@ walk(list.files("R/functions", full.names = TRUE), source)
 # Original data
 data <- readRDS("data/processed/data_current.rds")
 
-# Subset patients that finished the survey and EQ-5D-5L questions
+# Subset respondents that finished the survey and EQ-5D-5L questions
 df <- data |>
   filter(included == 1L) |>
   select(id, H6, H12)

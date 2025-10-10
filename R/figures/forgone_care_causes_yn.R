@@ -1,11 +1,10 @@
-#' Name         : forgone_care_causes.R
+#' Name         : forgone_care_causes_yn.R
 #' Author       : Alexandre Bohyn
-#' Date         : September 15, 2025
-#' Purpose      :
-#' Files created: - `results/figures/png/forgone_care_causes.png`
-#'                - `results/figures/pptx/forgone_care_causes.pptx`
-#'                - `data/processed/subdata/forgone_care_causes_data.rds`
+#' Date         : 10 October 2025
+#' Purpose      : description
+#' Files created: `output/figures/forgone_care_causes_yn.R.png/pdf`
 #' Edits        :
+#'  - 10 October 2025: Created file.
 
 # Packages ----------------------------------------------------------------
 
@@ -24,42 +23,13 @@ data <- readRDS("data/processed/data_current.rds")
 # Subset to relevant columns and filter to last survey only
 df <- data |>
   filter(included == 1L) |>
-  filter(HC12 == 1) |> # Forgone care reported
-  select(id, matches("^HC13_SQ\\d+$")) |>
-  filter(!if_all(matches("^HC13.+$"), is.na))
-
-# Isolate the diagnoses from the column labels
-labs <- get_labels(df, include = -id) |>
-  mutate(label = str_remove(label, " \\(.*\\)$")) # Remove anything in parentheses
-
-# Pivot the data to long format and count the number of responses per diagnosis
-df_long <- df |>
-  pivot_longer(
-    cols = -id,
-    names_to = "variable",
-    values_to = "response"
-  ) |>
-  filter(response == 1) |>
-  left_join(labs, by = "variable")
-
-# Pivot to wide format and save for future use
-df_long |>
-  select(id, variable, response) |>
-  mutate(response = unclass(response)) |>
-  pivot_wider(
-    names_from = variable,
-    values_from = response,
-    values_fill = 0
-  ) |>
-  set_variable_labels(
-    .labels = as.list(labs$label) |> setNames(labs$variable),
-    .strict = FALSE
-  ) |>
-  write_rds("data/processed/subdata/forgone_care_causes_data.rds")
+  select(id, HC12) |>
+  filter(!is.na(HC12)) |> # Remove missing values
+  mutate(HC12 = to_factor(HC12)) # Convert to factor with labels
 
 # Count the number of responses per diagnosis
-df_count <- df_long |>
-  count(label, name = "n") |>
+df_count <- df |>
+  count(HC12, name = "n") |>
   mutate(
     perc = n / nrow(df),
     text_label = glue("{n} ({scales::percent(perc, accuracy = 1)})")
@@ -69,13 +39,13 @@ df_count <- df_long |>
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Causes of forgone care mentioned by survey respondents (N={nrow(df)})."
+  "Forgone care (N={nrow(df)})."
 )
 
 # Create the figure --------------------------------------------------------
 
 fig <- df_count |>
-  ggplot(aes(y = reorder(label, n), x = n)) +
+  ggplot(aes(y = HC12, x = n)) +
   geom_col(fill = "steelblue") +
   geom_text(aes(label = text_label), hjust = -0.25, size = 5) +
   scale_x_continuous(
@@ -99,7 +69,7 @@ fig <- df_count |>
 
 # Save to png
 ggsave(
-  filename = "results/figures/png/forgone_care_causes.png",
+  filename = "results/figures/png/forgone_care_causes_yn.png",
   plot = fig,
   width = 8,
   height = 6,
@@ -109,6 +79,6 @@ ggsave(
 # Save to powerpoint
 create_pptx(
   ggobj = fig,
-  path = "results/figures/pptx/forgone_care_causes.pptx",
+  path = "results/figures/pptx/forgone_care_causes_yn.pptx",
   overwrite = TRUE
 )

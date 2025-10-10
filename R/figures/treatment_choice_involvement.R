@@ -81,7 +81,7 @@ fig <- df_count |>
   labs(
     title = str_wrap(caption, 70),
     x = NULL,
-    y = "Number of patients"
+    y = "Number of respondents"
   ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.3))) +
   scale_fill_manual(

@@ -19,7 +19,7 @@ plot_eq5d5l <- function(data, category_name = NULL, caption = NULL) {
     labs(
       title = str_wrap(caption, width = 35),
       x = "",
-      y = "Number of patients",
+      y = "Number of respondents",
       fill = category_name
     ) +
     see::scale_fill_material() +
@@ -52,7 +52,9 @@ plot_eq5d5l_sankey <- function(data, caption = NULL) {
         label = ifelse(
           after_stat(prop) <= 0.045,
           "*",
-          scales::percent(after_stat(prop), accuracy = 1)
+          glue::glue(
+            "{scales::percent(after_stat(prop), accuracy = 1)} ({after_stat(count)})"
+          )
         )
       )
     ) +

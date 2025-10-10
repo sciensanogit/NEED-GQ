@@ -109,7 +109,7 @@ caption <- glue(
   labs(
     title = caption,
     x = "",
-    y = "Number of patients"
+    y = "Number of respondents"
   ) +
   theme_kce(font_size = 16) +
   scale_fill_manual(

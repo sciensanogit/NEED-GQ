@@ -31,6 +31,7 @@ df <- data |>
 ## diagnosis
 df_diag <- df |>
   select(id, D13, D13b) |>
+  filter(!if_all(matches("^D13.+$"), is.na)) |>
   # Redefine categories for the number of years not working (S3b)
   mutate(
     D13b = ifelse(D13b > 100, NA, D13b), # Exclude abnormal values
@@ -75,6 +76,7 @@ df_sub <- df_diag |>
 ## First symptoms
 df_symp <- df |>
   select(id, answer = DSHC1) |>
+  filter(!is.na(answer)) |>
   mutate(
     answer = remove_val_labels(answer) |>
       factor(
@@ -91,11 +93,11 @@ df_symp <- df |>
   ) |>
   filter(!is.na(answer))
 
-# Join with the diagnosis data to keep only included patients
+# Join with the diagnosis data to keep only included respondents
 df_sub <- df_sub |>
   full_join(df_symp |> select(id, time_to_symp = answer), by = "id")
 
-# summarize the total number of unique patients
+# summarize the total number of unique respondents
 df_symp <- df_symp |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
@@ -108,6 +110,7 @@ df_symp <- df_symp |>
 ## First healthcare contact
 df_hc <- df |>
   select(id, answer = HC1) |>
+  filter(!is.na(answer)) |>
   mutate(
     answer = remove_val_labels(answer) |>
       factor(
@@ -124,7 +127,7 @@ df_hc <- df |>
   ) |>
   filter(!is.na(answer))
 
-# Join with the diagnosis data to keep only included patients
+# Join with the diagnosis data to keep only included respondents
 df_sub <- df_sub |>
   full_join(df_hc |> select(id, time_to_hc = answer), by = "id")
 
@@ -132,7 +135,7 @@ df_sub <- df_sub |>
 df_sub |>
   saveRDS("data/processed/subdata/treatment_timing_data.rds")
 
-# summarize the total number of unique patients
+# summarize the total number of unique respondents
 df_hc <- df_hc |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
@@ -165,10 +168,10 @@ fig_diag <- df_diag |>
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 5) +
   scale_y_continuous(
-    name = "Number of patients",
+    name = "Number of respondents",
     expand = expansion(mult = c(0, 0.3))
   ) +
-  labs(title = str_wrap(caption_diag, 60), x = NULL) +
+  labs(title = str_wrap(caption_diag, 40), x = NULL) +
   theme_kce() +
   scale_fill_manual(
     name = NULL,
@@ -191,10 +194,10 @@ fig_symp <- df_symp |>
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 5) +
   scale_y_continuous(
-    name = "Number of patients",
+    name = "Number of respondents",
     expand = expansion(mult = c(0, 0.3))
   ) +
-  labs(title = str_wrap(caption_symp, 60), x = NULL) +
+  labs(title = str_wrap(caption_symp, 40), x = NULL) +
   theme_kce() +
   scale_fill_manual(
     name = NULL,
@@ -218,10 +221,10 @@ fig_hc <- df_hc |>
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 5) +
   scale_y_continuous(
-    name = "Number of patients",
+    name = "Number of respondents",
     expand = expansion(mult = c(0, 0.3))
   ) +
-  labs(title = str_wrap(caption_hc, 60), x = NULL) +
+  labs(title = str_wrap(caption_hc, 40), x = NULL) +
   theme_kce() +
   scale_fill_manual(
     name = NULL,
@@ -240,7 +243,7 @@ fig_hc <- df_hc |>
   )
 
 # Combine the three plots into one
-fig <- fig_symp / fig_hc
+fig <- fig_symp + fig_hc
 
 # Export it ---------------------------------------------------------------
 
@@ -248,8 +251,8 @@ fig <- fig_symp / fig_hc
 ggsave(
   filename = "results/figures/png/treatment_timing.png",
   plot = fig,
-  width = 8,
-  height = 12,
+  width = 12,
+  height = 8,
   dpi = 300
 )
 ggsave(
@@ -263,8 +266,8 @@ ggsave(
 # Save to powerpoint
 create_pptx(
   ggobj = fig,
-  width = 8,
-  height = 12,
+  width = 12,
+  height = 8,
   path = "results/figures/pptx/treatment_timing.pptx",
   overwrite = TRUE
 )
