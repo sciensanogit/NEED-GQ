@@ -54,7 +54,7 @@ df_long <- df |>
   ) |>
   filter(!is.na(response)) |>
   mutate(
-    n_ordering = sum(as.numeric(response) %in% c(6, 7)),
+    n_ordering = sum(as.numeric(response) %in% c(5, 6)),
     .by = c(label)
   )
 
@@ -86,12 +86,14 @@ totals_df <- count(df_long, label, n_ordering) |>
   mutate(
     response = NA,
     perc = round(100 * n / n_total, 1),
-    txt_label = glue::glue("{n} ({perc}%)")
+    txt_label = glue::glue("{n} ({perc}%)"),
+    total = n
   )
 
 
 (fig <- df_long |>
   count(label, n_ordering, response) |>
+  mutate(total = sum(n), .by = label) |>
   mutate(
     perc = round(100 * n / n_total, 1),
     txt_label = glue::glue("{n} ({perc}%)")

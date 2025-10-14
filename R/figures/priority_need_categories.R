@@ -63,7 +63,13 @@ df_long <- df |>
 
 # Save the long data for later us
 df_long |>
-  select(id, priority = answer) |>
+  mutate(priority = as.numeric(answer) - 1) |> # Convert to numeric (0-5) and remove "I don't know"
+  select(id, question, priority) |>
+  pivot_wider(names_from = question, values_from = priority) |>
+  set_variable_labels(
+    .labels = as.list(labs$label) |> setNames(labs$variable),
+    .strict = FALSE
+  ) |>
   saveRDS("data/processed/subdata/priority_need_categories.rds")
 
 # Count the number of responses per category and answer
@@ -80,6 +86,8 @@ caption <- glue(
 # Create the figure --------------------------------------------------------
 
 fig <- df_count |>
+  # Remove this line if you want to keep "Not a priority"
+  filter(answer != "Not a priority") |>
   ggplot(aes(x = n, y = reorder(label, n_ordering), fill = answer)) +
   geom_col(position = "stack") +
   scale_x_continuous(

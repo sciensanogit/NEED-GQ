@@ -20,7 +20,7 @@ library(here)
 library(labelled)
 library(gtsummary)
 library(flextable)
-library(flextable)
+library(glue)
 ```
 
 ```{r group-data}
@@ -125,16 +125,30 @@ data_list <- lapply(data_files, readRDS)
 # Join each data to the group data
 df <- group
 for (i in seq_along(data_list)) {
+  name <- data_files[[i]] |> fs::path_file() |> fs::path_ext_remove()
+  # cli::cli_alert_info("Joining data: {name}")
   df <- df |>
     dplyr::left_join(data_list[[i]], by = "id")
+  # cli::cli_text("\t - New dimensions: {dim(df)[1]} rows, {dim(df)[2]} columns\n")
 }
 ```
 
-```{r fn-tbl-single-var}
-tbl_sv <- function(data, group_var, var, var_lab) {
-  lab <- pull(group, {{ group_var }}) |> attr("label")
-  lab <- paste0("**", lab, "**")
-  data |>
+```{r fn-tbl_one_var_cont}
+tbl_one_var_cont <- function(data, group_var, var, var_lab) {
+  pre_lab <- pull(group, {{ group_var }}) |> attr("label")
+  lab <- paste0("**", pre_lab, "**")
+  # Count the number of non-missing observations in the grouping variables
+  df <- data |>
+    filter(!is.na({{ group_var }}))
+  n_total <- nrow(df)
+  # Count the number of non-missing observations in the variables to summarize
+  df2 <- df |> filter(!is.na({{ var }}))
+  n_vars <- nrow(df2)
+  # Generate a message about the number of observations used, to use as a footnote
+  msg <- glue(
+    "Out of {n_total} participants with non-missing values in the grouping variable ({pre_lab}), {n_vars} had non-missing values in the summarized variable ({var_lab}), and were included in the analysis."
+  )
+  df |>
     set_variable_labels({{ var }} := var_lab) |>
     tbl_summary(
       by = {{ group_var }},
@@ -145,32 +159,136 @@ tbl_sv <- function(data, group_var, var, var_lab) {
       digits = everything() ~ 1,
       missing_text = "Missing"
     ) |>
+    add_overall() |>
     modify_spanning_header(all_stat_cols() ~ lab) |>
+    modify_footnote_spanning_header(
+      footnote = msg,
+      columns = all_stat_cols()
+    ) |>
     add_p() |>
+    as_flex_table() |>
+    width(j = 1, width = 4, unit = "cm") |>
+    width(j = -1, width = 3, unit = "cm")
+}
+```
+
+```{r fn-tbl-one-var-categ}
+tbl_one_var_categ <- function(data, group_var, var, var_lab) {
+  # Define the label for the grouping variable
+  pre_lab <- pull(data, {{ group_var }}) |> attr("label")
+  lab <- paste0("**", pre_lab, "**")
+  # Count the number of non-missing observations in the grouping variables
+  df <- data |>
+    filter(!is.na({{ group_var }}))
+  n_total <- nrow(df)
+  # Count the number of non-missing observations in the variables to summarize
+  df2 <- df |> filter(!is.na({{ var }}))
+  n_vars <- nrow(df2)
+  # Generate a message about the number of observations used, to use as a footnote
+  msg <- glue(
+    "Out of {n_total} participants with non-missing values in the grouping variable ({pre_lab}), {n_vars} had non-missing values in the summarized variable, and were included in the analysis."
+  )
+  # Generate the summary table
+  df |>
+    set_variable_labels({{ var }} := var_lab) |>
+    tbl_summary(
+      by = {{ group_var }},
+      include = {{ var }},
+      missing_text = "Missing"
+    ) |>
+    add_overall() |>
+    add_p(
+      test = everything() ~ "fisher.test",
+      test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
+    ) |>
+    modify_spanning_header(all_stat_cols() ~ lab) |>
+    modify_footnote_spanning_header(
+      footnote = msg,
+      columns = all_stat_cols()
+    ) |>
     as_flex_table() |>
     width(j = 1, width = 5, unit = "cm") |>
     width(j = -1, width = 3, unit = "cm")
 }
 ```
 
-```{r fn-multiple-vars}
-tbl_mvs <- function(data, group_var, vars_match) {
-  lab <- pull(group, {{ group_var }}) |> attr("label")
-  lab <- paste0("**", lab, "**")
-  tbl_summary(
-    data = data,
-    by = {{ group_var }},
-    include = starts_with(vars_match),
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 0,
-    missing_text = "Missing"
-  ) |>
+```{r fn-tbl_mult_var_dicho}
+tbl_mult_var_dicho <- function(data, group_var, vars_match) {
+  # Define the label for the grouping variable
+  pre_lab <- pull(group, {{ group_var }}) |> attr("label")
+  lab <- paste0("**", pre_lab, "**")
+  # Count the number of non-missing observations in the grouping variables
+  df <- data |>
+    filter(!is.na({{ group_var }}))
+  n_total <- nrow(df)
+  # Count the number of non-missing observations in the variables to summarize
+  df2 <- df |> filter(if_any(starts_with(vars_match), ~ !is.na(.x)))
+  n_vars <- nrow(df2)
+  # Generate a message about the number of observations used, to use as a footnote
+  msg <- glue(
+    "Out of {n_total} participants with non-missing values in the grouping variable ({pre_lab}), {n_vars} had non-missing values in at least one of the summarized variables, and were included in the analysis."
+  )
+
+  # Create the summary table
+  df2 |>
+    mutate(across(starts_with(vars_match), ~ if_else(is.na(.x), 0, .x))) |>
+    tbl_summary(
+      by = {{ group_var }},
+      include = starts_with(vars_match),
+      type = everything() ~ "dichotomous",
+      value = everything() ~ "1",
+      missing_text = "Missing"
+    ) |>
+    add_overall() |>
     modify_spanning_header(all_stat_cols() ~ lab) |>
+    modify_footnote_spanning_header(
+      footnote = msg,
+      columns = all_stat_cols()
+    ) |>
     add_p() |>
     as_flex_table() |>
-    width(j = 1, width = 5, unit = "cm") |>
+    width(j = 1, width = 4, unit = "cm") |>
+    width(j = -1, width = 3, unit = "cm")
+}
+```
+
+```{r fn-tbl_mult_var_cont}
+tbl_mult_var_cont <- function(data, group_var, vars_match) {
+  # Define the label for the grouping variable
+  pre_lab <- pull(group, {{ group_var }}) |> attr("label")
+  lab <- paste0("**", pre_lab, "**")
+  # Count the number of non-missing observations in the grouping variables
+  df <- data |>
+    filter(!is.na({{ group_var }}))
+  n_total <- nrow(df)
+  # Count the number of non-missing observations in the variables to summarize
+  df2 <- df |> filter(if_any(starts_with(vars_match), ~ !is.na(.x)))
+  n_vars <- nrow(df2)
+  # Generate a message about the number of observations used, to use as a footnote
+  msg <- glue(
+    "Out of {n_total} participants with non-missing values in the grouping variable ({pre_lab}), {n_vars} had non-missing values in at least one of the summarized variables, and were included in the analysis."
+  )
+
+  # Create the summary table
+  df2 |>
+    tbl_summary(
+      by = {{ group_var }},
+      include = starts_with(vars_match),
+      type = everything() ~ "continuous2",
+      statistic = all_continuous2() ~
+        c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
+      digits = everything() ~ 0,
+      missing_text = "Missing"
+    ) |>
+    add_overall() |>
+    modify_spanning_header(all_stat_cols() ~ lab) |>
+    modify_footnote_spanning_header(
+      footnote = msg,
+      columns = all_stat_cols()
+    ) |>
+    add_p() |>
+    as_flex_table() |>
+    width(j = 1, width = 4, unit = "cm") |>
     width(j = -1, width = 3, unit = "cm")
 }
 ```
@@ -214,7 +332,7 @@ tbl_summary(
 ```{r, tab.id="tbl-hrqol-time"}
 #| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by time since diagnosis"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   time_since_diag,
   eq5d5l_health_score,
@@ -227,7 +345,12 @@ tbl_sv(
 ```{r, tab.id="tbl-hrqol-diag"}
 #| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by diagnosis"
 
-tbl_sv(df, diagnosis, eq5d5l_health_score, "EQ-5D health score difference")
+tbl_one_var_cont(
+  df,
+  diagnosis,
+  eq5d5l_health_score,
+  "EQ-5D health score difference"
+)
 ```
 
 \newpage
@@ -235,7 +358,12 @@ tbl_sv(df, diagnosis, eq5d5l_health_score, "EQ-5D health score difference")
 ```{r, tab.id="tbl-hrqol-gender"}
 #| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by gender"
 
-tbl_sv(df, gender, eq5d5l_health_score, "EQ-5D health score difference")
+tbl_one_var_cont(
+  df,
+  gender,
+  eq5d5l_health_score,
+  "EQ-5D health score difference"
+)
 ```
 
 \newpage
@@ -243,7 +371,12 @@ tbl_sv(df, gender, eq5d5l_health_score, "EQ-5D health score difference")
 ```{r, tab.id="tbl-hrqol-education"}
 #| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by education"
 
-tbl_sv(df, education, eq5d5l_health_score, "EQ-5D health score difference")
+tbl_one_var_cont(
+  df,
+  education,
+  eq5d5l_health_score,
+  "EQ-5D health score difference"
+)
 ```
 
 \newpage
@@ -251,7 +384,12 @@ tbl_sv(df, education, eq5d5l_health_score, "EQ-5D health score difference")
 ```{r, tab.id="tbl-hrqol-finance"}
 #| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by financial situation"
 
-tbl_sv(df, finance, eq5d5l_health_score, "EQ-5D health score difference")
+tbl_one_var_cont(
+  df,
+  finance,
+  eq5d5l_health_score,
+  "EQ-5D health score difference"
+)
 ```
 
 \newpage
@@ -259,7 +397,7 @@ tbl_sv(df, finance, eq5d5l_health_score, "EQ-5D health score difference")
 ```{r, tab.id="tbl-hrqol-age"}
 #| tab.cap = "Difference EQ-5D before onset of the symptoms vs today by age"
 
-tbl_sv(df, age, eq5d5l_health_score, "EQ-5D health score difference")
+tbl_one_var_cont(df, age, eq5d5l_health_score, "EQ-5D health score difference")
 ```
 
 \newpage
@@ -271,7 +409,7 @@ tbl_sv(df, age, eq5d5l_health_score, "EQ-5D health score difference")
 ```{r, tab.id="tbl-burden-phys-time"}
 #| tab.cap = "Burden of physical symptoms by time since diagnosis"
 
-tbl_mvs(df, time_since_diag, "HC5_SQ")
+tbl_mult_var_cont(df, time_since_diag, "HC5_SQ")
 ```
 
 \newpage
@@ -279,7 +417,7 @@ tbl_mvs(df, time_since_diag, "HC5_SQ")
 ```{r, tab.id="tbl-burden-phys-gender"}
 #| tab.cap = "Burden of physical symptoms by gender"
 
-tbl_mvs(df, gender, "HC5_SQ")
+tbl_mult_var_cont(df, gender, "HC5_SQ")
 ```
 
 \newpage
@@ -287,7 +425,7 @@ tbl_mvs(df, gender, "HC5_SQ")
 ```{r, tab.id="tbl-burden-phys-education"}
 #| tab.cap = "Burden of physical symptoms by education"
 
-tbl_mvs(df, education, "HC5_SQ")
+tbl_mult_var_cont(df, education, "HC5_SQ")
 ```
 
 \newpage
@@ -295,7 +433,7 @@ tbl_mvs(df, education, "HC5_SQ")
 ```{r, tab.id="tbl-burden-phys-finance"}
 #| tab.cap = "Burden of physical symptoms by financial situation"
 
-tbl_mvs(df, finance, "HC5_SQ")
+tbl_mult_var_cont(df, finance, "HC5_SQ")
 ```
 
 \newpage
@@ -303,7 +441,7 @@ tbl_mvs(df, finance, "HC5_SQ")
 ```{r, tab.id="tbl-burden-phys-diag"}
 #| tab.cap = "Burden of physical symptoms by diagnosis"
 
-tbl_mvs(df, diagnosis, "HC5_SQ")
+tbl_mult_var_cont(df, diagnosis, "HC5_SQ")
 ```
 
 \newpage
@@ -311,7 +449,7 @@ tbl_mvs(df, diagnosis, "HC5_SQ")
 ```{r, tab.id="tbl-burden-phys-age"}
 #| tab.cap = "Burden of physical symptoms by age"
 
-tbl_mvs(df, age, "HC5_SQ")
+tbl_mult_var_cont(df, age, "HC5_SQ")
 ```
 
 \newpage
@@ -321,7 +459,7 @@ tbl_mvs(df, age, "HC5_SQ")
 ```{r, tab.id="tbl-pain-gender"}
 #| tab.cap = "Pain/discomfort by gender"
 
-tbl_sv(df, gender, eq5d5l_pain_discomfort, "Pain/discomfort")
+tbl_one_var_cont(df, gender, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```
 
 \newpage
@@ -329,7 +467,7 @@ tbl_sv(df, gender, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```{r, tab.id="tbl-pain-age"}
 #| tab.cap = "Pain/discomfort by age"
 
-tbl_sv(df, age, eq5d5l_pain_discomfort, "Pain/discomfort")
+tbl_one_var_cont(df, age, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```
 
 \newpage
@@ -337,7 +475,7 @@ tbl_sv(df, age, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```{r, tab.id="tbl-pain-education"}
 #| tab.cap = "Pain/discomfort by education"
 
-tbl_sv(df, education, eq5d5l_pain_discomfort, "Pain/discomfort")
+tbl_one_var_cont(df, education, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```
 
 \newpage
@@ -345,7 +483,7 @@ tbl_sv(df, education, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```{r, tab.id="tbl-pain-finance"}
 #| tab.cap = "Pain/discomfort by financial situation"
 
-tbl_sv(df, finance, eq5d5l_pain_discomfort, "Pain/discomfort")
+tbl_one_var_cont(df, finance, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```
 
 \newpage
@@ -357,23 +495,7 @@ tbl_sv(df, finance, eq5d5l_pain_discomfort, "Pain/discomfort")
 ```{r, tab.id="tbl-burden-psych-time"}
 #| tab.cap = "Burden of psychological symptoms by time since diagnosis"
 
-df |>
-  labelled::remove_labels() |>
-  tbl_summary(
-    by = time_since_diag,
-    include = starts_with("H13_SQ"),
-    label = NULL,
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 1,
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, time_since_diag, "H13_SQ")
 ```
 
 \newpage
@@ -381,23 +503,7 @@ df |>
 ```{r, tab.id="tbl-burden-psych-age"}
 #| tab.cap = "Burden of psychological symptoms by age"
 
-df |>
-  labelled::remove_labels() |>
-  tbl_summary(
-    by = age,
-    include = starts_with("H13_SQ"),
-    label = NULL,
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 1,
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, age, "H13_SQ")
 ```
 
 \newpage
@@ -405,23 +511,7 @@ df |>
 ```{r, tab.id="tbl-burden-psych-diagnosis"}
 #| tab.cap = "Burden of psychological symptoms by diagnosis"
 
-df |>
-  labelled::remove_labels() |>
-  tbl_summary(
-    by = diagnosis,
-    include = starts_with("H13_SQ"),
-    label = NULL,
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 1,
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Diagnosis**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, diagnosis, "H13_SQ")
 ```
 
 \newpage
@@ -429,23 +519,7 @@ df |>
 ```{r, tab.id="tbl-burden-psych-gender"}
 #| tab.cap = "Burden of psychological symptoms by gender"
 
-df |>
-  labelled::remove_labels() |>
-  tbl_summary(
-    by = gender,
-    include = starts_with("H13_SQ"),
-    label = NULL,
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 1,
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, gender, "H13_SQ")
 ```
 
 \newpage
@@ -453,23 +527,7 @@ df |>
 ```{r, tab.id="tbl-burden-psych-education"}
 #| tab.cap = "Burden of psychological symptoms by education"
 
-df |>
-  labelled::remove_labels() |>
-  tbl_summary(
-    by = education,
-    include = starts_with("H13_SQ"),
-    label = NULL,
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 1,
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, education, "H13_SQ")
 ```
 
 \newpage
@@ -477,23 +535,7 @@ df |>
 ```{r, tab.id="tbl-burden-psych-finance"}
 #| tab.cap = "Burden of psychological symptoms by financial situation"
 
-df |>
-  labelled::remove_labels() |>
-  tbl_summary(
-    by = finance,
-    include = starts_with("H13_SQ"),
-    label = NULL,
-    type = everything() ~ "continuous2",
-    statistic = all_continuous2() ~
-      c("{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"),
-    digits = everything() ~ 1,
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, finance, "H13_SQ")
 ```
 
 ### Anxiety/depression
@@ -501,7 +543,7 @@ df |>
 ```{r, tab.id="tbl-anxiety-gender"}
 #| tab.cap = "Anxiety/depression by gender"
 
-tbl_sv(df, gender, eq5d5l_anxiety_depression, "Anxiety/depression")
+tbl_one_var_cont(df, gender, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```
 
 \newpage
@@ -509,7 +551,7 @@ tbl_sv(df, gender, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```{r, tab.id="tbl-anxiety-age"}
 #| tab.cap = "Anxiety/depression by age"
 
-tbl_sv(df, age, eq5d5l_anxiety_depression, "Anxiety/depression")
+tbl_one_var_cont(df, age, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```
 
 \newpage
@@ -517,7 +559,7 @@ tbl_sv(df, age, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```{r, tab.id="tbl-anxiety-education"}
 #| tab.cap = "Anxiety/depression by education"
 
-tbl_sv(df, education, eq5d5l_anxiety_depression, "Anxiety/depression")
+tbl_one_var_cont(df, education, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```
 
 \newpage
@@ -525,7 +567,7 @@ tbl_sv(df, education, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```{r, tab.id="tbl-anxiety-finance"}
 #| tab.cap = "Anxiety/depression by financial situation"
 
-tbl_sv(df, finance, eq5d5l_anxiety_depression, "Anxiety/depression")
+tbl_one_var_cont(df, finance, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```
 
 \newpage
@@ -537,7 +579,7 @@ tbl_sv(df, finance, eq5d5l_anxiety_depression, "Anxiety/depression")
 ```{r, tab.id="tbl-mobility-gender"}
 #| tab.cap = "Mobility by gender"
 
-tbl_sv(df, gender, eq5_mobility, "Mobility")
+tbl_one_var_cont(df, gender, eq5_mobility, "Mobility")
 ```
 
 \newpage
@@ -545,7 +587,7 @@ tbl_sv(df, gender, eq5_mobility, "Mobility")
 ```{r, tab.id="tbl-mobility-age"}
 #| tab.cap = "Mobility by age"
 
-tbl_sv(df, age, eq5_mobility, "Mobility")
+tbl_one_var_cont(df, age, eq5_mobility, "Mobility")
 ```
 
 \newpage
@@ -553,7 +595,7 @@ tbl_sv(df, age, eq5_mobility, "Mobility")
 ```{r, tab.id="tbl-mobility-education"}
 #| tab.cap = "Mobility by education"
 
-tbl_sv(df, education, eq5_mobility, "Mobility")
+tbl_one_var_cont(df, education, eq5_mobility, "Mobility")
 ```
 
 \newpage
@@ -561,7 +603,7 @@ tbl_sv(df, education, eq5_mobility, "Mobility")
 ```{r, tab.id="tbl-mobility-finance"}
 #| tab.cap = "Mobility by financial situation"
 
-tbl_sv(df, finance, eq5_mobility, "Mobility")
+tbl_one_var_cont(df, finance, eq5_mobility, "Mobility")
 ```
 
 \newpage
@@ -571,7 +613,7 @@ tbl_sv(df, finance, eq5_mobility, "Mobility")
 ```{r, tab.id="tbl-self-care-gender"}
 #| tab.cap = "Self-care by gender"
 
-tbl_sv(df, gender, eq5_self_care, "Self-care")
+tbl_one_var_cont(df, gender, eq5_self_care, "Self-care")
 ```
 
 \newpage
@@ -579,7 +621,7 @@ tbl_sv(df, gender, eq5_self_care, "Self-care")
 ```{r, tab.id="tbl-self-care-age"}
 #| tab.cap = "Self-care by age"
 
-tbl_sv(df, age, eq5_self_care, "Self-care")
+tbl_one_var_cont(df, age, eq5_self_care, "Self-care")
 ```
 
 \newpage
@@ -587,7 +629,7 @@ tbl_sv(df, age, eq5_self_care, "Self-care")
 ```{r, tab.id="tbl-self-care-education"}
 #| tab.cap = "Self-care by education"
 
-tbl_sv(df, education, eq5_self_care, "Self-care")
+tbl_one_var_cont(df, education, eq5_self_care, "Self-care")
 ```
 
 \newpage
@@ -595,7 +637,7 @@ tbl_sv(df, education, eq5_self_care, "Self-care")
 ```{r, tab.id="tbl-self-care-finance"}
 #| tab.cap = "Self-care by financial situation"
 
-tbl_sv(df, finance, eq5_self_care, "Self-care")
+tbl_one_var_cont(df, finance, eq5_self_care, "Self-care")
 ```
 
 \newpage
@@ -605,7 +647,7 @@ tbl_sv(df, finance, eq5_self_care, "Self-care")
 ```{r, tab.id="tbl-usual-activities-gender"}
 #| tab.cap = "Usual activities by gender"
 
-tbl_sv(df, gender, eq5d5l_usual_activities, "Usual activities")
+tbl_one_var_cont(df, gender, eq5d5l_usual_activities, "Usual activities")
 ```
 
 \newpage
@@ -613,7 +655,7 @@ tbl_sv(df, gender, eq5d5l_usual_activities, "Usual activities")
 ```{r, tab.id="tbl-usual-activities-age"}
 #| tab.cap = "Usual activities by age"
 
-tbl_sv(df, age, eq5d5l_usual_activities, "Usual activities")
+tbl_one_var_cont(df, age, eq5d5l_usual_activities, "Usual activities")
 ```
 
 \newpage
@@ -621,7 +663,7 @@ tbl_sv(df, age, eq5d5l_usual_activities, "Usual activities")
 ```{r, tab.id="tbl-usual-activities-education"}
 #| tab.cap = "Usual activities by education"
 
-tbl_sv(df, education, eq5d5l_usual_activities, "Usual activities")
+tbl_one_var_cont(df, education, eq5d5l_usual_activities, "Usual activities")
 ```
 
 \newpage
@@ -629,7 +671,7 @@ tbl_sv(df, education, eq5d5l_usual_activities, "Usual activities")
 ```{r, tab.id="tbl-usual-activities-finance"}
 #| tab.cap = "Usual activities by financial situation"
 
-tbl_sv(df, finance, eq5d5l_usual_activities, "Usual activities")
+tbl_one_var_cont(df, finance, eq5d5l_usual_activities, "Usual activities")
 ```
 
 \newpage
@@ -639,7 +681,7 @@ tbl_sv(df, finance, eq5d5l_usual_activities, "Usual activities")
 ```{r, tab.id="tbl-reproductive-health-gender"}
 #| tab.cap = "Reproductive health by gender"
 
-tbl_sv(df, gender, reproductive_health, "Reproductive health")
+tbl_one_var_cont(df, gender, reproductive_health, "Reproductive health")
 ```
 
 \newpage
@@ -647,7 +689,7 @@ tbl_sv(df, gender, reproductive_health, "Reproductive health")
 ```{r, tab.id="tbl-reproductive-health-age"}
 #| tab.cap = "Reproductive health by age"
 
-tbl_sv(df, age, reproductive_health, "Reproductive health")
+tbl_one_var_cont(df, age, reproductive_health, "Reproductive health")
 ```
 
 \newpage
@@ -655,7 +697,7 @@ tbl_sv(df, age, reproductive_health, "Reproductive health")
 ```{r, tab.id="tbl-reproductive-health-education"}
 #| tab.cap = "Reproductive health by education"
 
-tbl_sv(df, education, reproductive_health, "Reproductive health")
+tbl_one_var_cont(df, education, reproductive_health, "Reproductive health")
 ```
 
 \newpage
@@ -663,7 +705,7 @@ tbl_sv(df, education, reproductive_health, "Reproductive health")
 ```{r, tab.id="tbl-reproductive-health-finance"}
 #| tab.cap = "Reproductive health by financial situation"
 
-tbl_sv(df, finance, reproductive_health, "Reproductive health")
+tbl_one_var_cont(df, finance, reproductive_health, "Reproductive health")
 ```
 
 \newpage
@@ -673,7 +715,7 @@ tbl_sv(df, finance, reproductive_health, "Reproductive health")
 ```{r, tab.id="tbl-sexual-health-gender"}
 #| tab.cap = "Sexual health by gender"
 
-tbl_sv(df, gender, sexual_health, "Sexual health")
+tbl_one_var_cont(df, gender, sexual_health, "Sexual health")
 ```
 
 \newpage
@@ -681,7 +723,7 @@ tbl_sv(df, gender, sexual_health, "Sexual health")
 ```{r, tab.id="tbl-sexual-health-age"}
 #| tab.cap = "Sexual health by age"
 
-tbl_sv(df, age, sexual_health, "Sexual health")
+tbl_one_var_cont(df, age, sexual_health, "Sexual health")
 ```
 
 \newpage
@@ -689,7 +731,7 @@ tbl_sv(df, age, sexual_health, "Sexual health")
 ```{r, tab.id="tbl-sexual-health-education"}
 #| tab.cap = "Sexual health by education"
 
-tbl_sv(df, education, sexual_health, "Sexual health")
+tbl_one_var_cont(df, education, sexual_health, "Sexual health")
 ```
 
 \newpage
@@ -697,7 +739,7 @@ tbl_sv(df, education, sexual_health, "Sexual health")
 ```{r, tab.id="tbl-sexual-health-finance"}
 #| tab.cap = "Sexual health by financial situation"
 
-tbl_sv(df, finance, sexual_health, "Sexual health")
+tbl_one_var_cont(df, finance, sexual_health, "Sexual health")
 ```
 
 \newpage
@@ -709,19 +751,7 @@ tbl_sv(df, finance, sexual_health, "Sexual health")
 ```{r, tab.id="tbl-treatment-use-time"}
 #| tab.cap = "Treatment use by time since diagnosis"
 
-df |>
-  tbl_summary(
-    by = time_since_diag,
-    include = starts_with("HC3_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, time_since_diag, "HC3_SQ")
 ```
 
 \newpage
@@ -729,19 +759,7 @@ df |>
 ```{r, tab.id="tbl-treatment-use-diag"}
 #| tab.cap = "Treatment use by diagnosis"
 
-df |>
-  tbl_summary(
-    by = diagnosis,
-    include = starts_with("HC3_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Diagnosis**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, diagnosis, "HC3_SQ")
 ```
 
 \newpage
@@ -749,19 +767,7 @@ df |>
 ```{r, tab.id="tbl-treatment-use-gender"}
 #| tab.cap = "Treatment use by gender"
 
-df |>
-  tbl_summary(
-    by = gender,
-    include = starts_with("HC3_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, gender, "HC3_SQ")
 ```
 
 \newpage
@@ -769,39 +775,15 @@ df |>
 ```{r, tab.id="tbl-treatment-use-age"}
 #| tab.cap = "Treatment use by age"
 
-df |>
-  tbl_summary(
-    by = age,
-    include = starts_with("HC3_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, age, "HC3_SQ")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-treatment-use-education"}
-#| tab.cap = "Treatment use by age"
+#| tab.cap = "Treatment use by education"
 
-df |>
-  tbl_summary(
-    by = education,
-    include = starts_with("HC3_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, education, "HC3_SQ")
 ```
 
 \newpage
@@ -809,19 +791,7 @@ df |>
 ```{r, tab.id="tbl-treatment-use-finance"}
 #| tab.cap = "Treatment use by financial situation"
 
-df |>
-  tbl_summary(
-    by = finance,
-    include = starts_with("HC3_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, finance, "HC3_SQ")
 ```
 
 \newpage
@@ -831,19 +801,7 @@ df |>
 ```{r, tab.id="tbl-burden-treatment-time"}
 #| tab.cap = "Burden of the treatment by time since diagnosis"
 
-df |>
-  tbl_summary(
-    by = time_since_diag,
-    include = starts_with("HC4_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, time_since_diag, "HC4_SQ")
 ```
 
 \newpage
@@ -851,19 +809,7 @@ df |>
 ```{r, tab.id="tbl-burden-treatment-gender"}
 #| tab.cap = "Burden of the treatment by gender"
 
-df |>
-  tbl_summary(
-    by = gender,
-    include = starts_with("HC4_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, gender, "HC4_SQ")
 ```
 
 \newpage
@@ -871,19 +817,7 @@ df |>
 ```{r, tab.id="tbl-burden-treatment-age"}
 #| tab.cap = "Burden of the treatment by age"
 
-df |>
-  tbl_summary(
-    by = age,
-    include = starts_with("HC4_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, age, "HC4_SQ")
 ```
 
 \newpage
@@ -891,21 +825,7 @@ df |>
 ```{r, tab.id="tbl-burden-treatment-involvement"}
 #| tab.cap = "Burden of the treatment by involvement in treatment decisions"
 
-df |>
-  tbl_summary(
-    by = involvement,
-    include = starts_with("HC4_SQ"),
-    type = everything() ~ "dichotomous",
-    value = everything() ~ "1",
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(
-    all_stat_cols() ~ "**Involvement in treatment decisions**"
-  ) |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm") |>
-  width(j = 1, width = 5, unit = "cm")
+tbl_mult_var_dicho(df, involvement, "HC4_SQ")
 ```
 
 ## Quality of care
@@ -915,7 +835,7 @@ df |>
 ```{r, tab.id="tbl-satisfaction-organization-region"}
 #| tab.cap = "Satisfaction with organization of care by geographical region"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   region,
   HC7,
@@ -928,7 +848,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-organization-gender"}
 #| tab.cap = "Satisfaction with organization of care by gender"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   gender,
   HC7,
@@ -941,7 +861,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-organization-age"}
 #| tab.cap = "Satisfaction with organization of care by age"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   age,
   HC7,
@@ -953,7 +873,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-organization-education"}
 #| tab.cap = "Satisfaction with organization of care by education"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   education,
   HC7,
@@ -965,7 +885,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-organization-finance"}
 #| tab.cap = "Satisfaction with organization of care by financial situation"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   finance,
   HC7,
@@ -980,7 +900,7 @@ tbl_sv(
 ```{r, tab.id="tbl-reccurence-hcp-region"}
 #| tab.cap = "Recurence of same healthcare personel by geographical region"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   region,
   HC9,
@@ -993,7 +913,7 @@ tbl_sv(
 ```{r, tab.id="tbl-reccurence-hcp-gender"}
 #| tab.cap = "Recurence of same healthcare personel by gender"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   gender,
   HC9,
@@ -1006,7 +926,7 @@ tbl_sv(
 ```{r, tab.id="tbl-reccurence-hcp-age"}
 #| tab.cap = "Recurence of same healthcare personel by age"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   age,
   HC9,
@@ -1018,7 +938,7 @@ tbl_sv(
 ```{r, tab.id="tbl-reccurence-hcp-education"}
 #| tab.cap = "Recurence of same healthcare personel by education"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   education,
   HC9,
@@ -1030,7 +950,7 @@ tbl_sv(
 ```{r, tab.id="tbl-reccurence-hcp-finance"}
 #| tab.cap = "Recurence of same healthcare personel by financial situation"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   finance,
   HC9,
@@ -1045,7 +965,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-info-hcp-region"}
 #| tab.cap = "Satisfaction with information received from healthcare personel by geographical region"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   region,
   hcp_information_satisfaction,
@@ -1058,7 +978,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-info-hcp-gender"}
 #| tab.cap = "Satisfaction with information received from healthcare personel by gender"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   gender,
   hcp_information_satisfaction,
@@ -1071,7 +991,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-info-hcp-age"}
 #| tab.cap = "Satisfaction with information received from healthcare personel by age"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   age,
   hcp_information_satisfaction,
@@ -1084,7 +1004,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-info-hcp-education"}
 #| tab.cap = "Satisfaction with information received from healthcare personel by education"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   education,
   hcp_information_satisfaction,
@@ -1097,7 +1017,7 @@ tbl_sv(
 ```{r, tab.id="tbl-satisfaction-info-hcp-finance"}
 #| tab.cap = "Satisfaction with information received from healthcare personel by financial situation"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   finance,
   hcp_information_satisfaction,
@@ -1112,7 +1032,7 @@ tbl_sv(
 ```{r, tab.id="tbl-trt-choice-involvement-region"}
 #| tab.cap = "Involvement in treatment choice by geographical region"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   region,
   treatment_choice_involvement,
@@ -1125,7 +1045,7 @@ tbl_sv(
 ```{r, tab.id="tbl-trt-choice-involvement-gender"}
 #| tab.cap = "Involvement in treatment choice by gender"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   gender,
   treatment_choice_involvement,
@@ -1138,7 +1058,7 @@ tbl_sv(
 ```{r, tab.id="tbl-trt-choice-involvement-age"}
 #| tab.cap = "Involvement in treatment choice by age"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   age,
   treatment_choice_involvement,
@@ -1151,7 +1071,7 @@ tbl_sv(
 ```{r, tab.id="tbl-trt-choice-involvement-education"}
 #| tab.cap = "Involvement in treatment choice by education"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   education,
   treatment_choice_involvement,
@@ -1164,7 +1084,7 @@ tbl_sv(
 ```{r, tab.id="tbl-trt-choice-involvement-finance"}
 #| tab.cap = "Involvement in treatment choice by financial situation"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   finance,
   treatment_choice_involvement,
@@ -1181,22 +1101,12 @@ tbl_sv(
 ```{r, tbl.id="tbl-time-symptoms-decision-region"}
 #| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by region"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = region,
-  include = time_to_symp,
-  label = time_to_symp ~
-    "Time between first symptoms and decision to search care",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_symp ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  region,
+  time_to_symp,
+  "Time between first symptoms and decision to search care"
+)
 ```
 
 \newpage
@@ -1204,19 +1114,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-symptoms-decision-gender"}
 #| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by gender"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = gender,
-  include = time_to_symp,
-  label = time_to_symp ~
-    "Time between first symptoms and decision to search care",
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  gender,
+  time_to_symp,
+  "Time between first symptoms and decision to search care"
+)
 ```
 
 \newpage
@@ -1224,19 +1127,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-symptoms-decision-age"}
 #| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by age"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = age,
-  include = time_to_symp,
-  label = time_to_symp ~
-    "Time between first symptoms and decision to search care",
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  age,
+  time_to_symp,
+  "Time between first symptoms and decision to search care"
+)
 ```
 
 \newpage
@@ -1244,19 +1140,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-symptoms-decision-education"}
 #| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by education"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = education,
-  include = time_to_symp,
-  label = time_to_symp ~
-    "Time between first symptoms and decision to search care",
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  education,
+  time_to_symp,
+  "Time between first symptoms and decision to search care"
+)
 ```
 
 \newpage
@@ -1264,19 +1153,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-symptoms-decision-finance"}
 #| tab.cap = "Time between first symptoms and decision to search care (DSHC1) by financial situation"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = finance,
-  include = time_to_symp,
-  label = time_to_symp ~
-    "Time between first symptoms and decision to search care",
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  finance,
+  time_to_symp,
+  "Time between first symptoms and decision to search care"
+)
 ```
 
 ### Time between first appointment and diagnosis 
@@ -1284,21 +1166,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-first-app-diagnosis-region"}
 #| tab.cap = "Time between first symptoms and diagnosis (D13) by region"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = region,
-  include = time_to_diagnosis,
-  label = time_to_diagnosis ~ "Time between first appointment and diagnosis",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_diagnosis ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  region,
+  time_to_diagnosis,
+  "Time between first appointment and diagnosis"
+)
 ```
 
 ### Time between diagnosis and treatment
@@ -1306,21 +1179,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-diagnosis-treatment-region"}
 #| tab.cap = "Time between diagnosis and treatment (HC1) by region"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = region,
-  include = time_to_hc,
-  label = time_to_hc ~ "Time between diagnosis and treatment",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_hc ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  region,
+  time_to_hc,
+  "Time between diagnosis and treatment"
+)
 ```
 
 \newpage
@@ -1328,21 +1192,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-diagnosis-treatment-gender"}
 #| tab.cap = "Time between diagnosis and treatment (HC1) by gender"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = gender,
-  include = time_to_hc,
-  label = time_to_hc ~ "Time between diagnosis and treatment",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_hc ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  gender,
+  time_to_hc,
+  "Time between diagnosis and treatment"
+)
 ```
 
 \newpage
@@ -1350,21 +1205,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-diagnosis-treatment-age"}
 #| tab.cap = "Time between diagnosis and treatment (HC1) by age"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = age,
-  include = time_to_hc,
-  label = time_to_hc ~ "Time between diagnosis and treatment",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_hc ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  age,
+  time_to_hc,
+  "Time between diagnosis and treatment"
+)
 ```
 
 \newpage
@@ -1372,21 +1218,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-diagnosis-treatment-education"}
 #| tab.cap = "Time between diagnosis and treatment (HC1) by education"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = education,
-  include = time_to_hc,
-  label = time_to_hc ~ "Time between diagnosis and treatment",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_hc ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  education,
+  time_to_hc,
+  "Time between diagnosis and treatment"
+)
 ```
 
 \newpage
@@ -1394,21 +1231,12 @@ tbl_summary(
 ```{r, tbl.id="tbl-time-diagnosis-treatment-finance"}
 #| tab.cap = "Time between diagnosis and treatment (HC1) by financial situation"
 
-tbl_summary(
+tbl_one_var_categ(
   df,
-  by = finance,
-  include = time_to_hc,
-  label = time_to_hc ~ "Time between diagnosis and treatment",
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_to_hc ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+  finance,
+  time_to_hc,
+  "Time between diagnosis and treatment"
+)
 ```
 
 
@@ -1419,16 +1247,7 @@ tbl_summary(
 ```{r, tab.id="tbl-forgone-care-region"}
 #| tab.cap = "Forgone care by region"
 
-df |>
-  tbl_summary(
-    by = region,
-    include = starts_with("HC13_SQ"),
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, region, "HC13_SQ")
 ```
 
 \newpage
@@ -1436,16 +1255,7 @@ df |>
 ```{r, tab.id="tbl-forgone-care-gender"}
 #| tab.cap = "Forgone care by gender"
 
-df |>
-  tbl_summary(
-    by = gender,
-    include = starts_with("HC13_SQ"),
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, gender, "HC13_SQ")
 ```
 
 \newpage
@@ -1453,16 +1263,7 @@ df |>
 ```{r, tab.id="tbl-forgone-care-age"}
 #| tab.cap = "Forgone care by age"
 
-df |>
-  tbl_summary(
-    by = age,
-    include = starts_with("HC13_SQ"),
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, age, "HC13_SQ")
 ```
 
 \newpage
@@ -1470,16 +1271,7 @@ df |>
 ```{r, tab.id="tbl-forgone-care-education"}
 #| tab.cap = "Forgone care by education"
 
-df |>
-  tbl_summary(
-    by = education,
-    include = starts_with("HC13_SQ"),
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, education, "HC13_SQ")
 ```
 
 \newpage
@@ -1487,16 +1279,7 @@ df |>
 ```{r, tab.id="tbl-forgone-care-finance"}
 #| tab.cap = "Forgone care by financial situation"
 
-df |>
-  tbl_summary(
-    by = finance,
-    include = starts_with("HC13_SQ"),
-    missing_text = "Missing"
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, finance, "HC13_SQ")
 ```
 
 
@@ -1507,16 +1290,7 @@ df |>
 ```{r, tab.id="tbl-social-support-region"}
 #| tab.cap = "Social support needs by region"
 
-df |>
-  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
-  tbl_summary(
-    by = region,
-    include = starts_with("S7_SQ")
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Region**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, region, "S7_SQ")
 ```
 
 \newpage
@@ -1524,16 +1298,7 @@ df |>
 ```{r, tab.id="tbl-social-support-gender"}
 #| tab.cap = "Social support needs by gender"
 
-df |>
-  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
-  tbl_summary(
-    by = gender,
-    include = starts_with("S7_SQ")
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, gender, "S7_SQ")
 ```
 
 \newpage
@@ -1541,16 +1306,7 @@ df |>
 ```{r, tab.id="tbl-social-support-age"}
 #| tab.cap = "Social support needs by age"
 
-df |>
-  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
-  tbl_summary(
-    by = age,
-    include = starts_with("S7_SQ")
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, age, "S7_SQ")
 ```
 
 \newpage
@@ -1558,16 +1314,7 @@ df |>
 ```{r, tab.id="tbl-social-support-education"}
 #| tab.cap = "Social support needs by education"
 
-df |>
-  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
-  tbl_summary(
-    by = education,
-    include = starts_with("S7_SQ")
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, education, "S7_SQ")
 ```
 
 \newpage
@@ -1575,16 +1322,7 @@ df |>
 ```{r, tab.id="tbl-social-support-finance"}
 #| tab.cap = "Social support needs by financial situation"
 
-df |>
-  mutate(across(starts_with("S7_SQ"), ~ ifelse(is.na(.x), 0, .x))) |>
-  tbl_summary(
-    by = finance,
-    include = starts_with("S7_SQ")
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  add_p() |>
-  as_flex_table() |>
-  width(width = 2, unit = "cm")
+tbl_mult_var_dicho(df, finance, "S7_SQ")
 ```
 
 \newpage
@@ -1594,7 +1332,12 @@ df |>
 ```{r, tab.id="tbl-impact-personal-relations-gender"}
 #| tab.cap = "Impact on personal relations by gender"
 
-tbl_sv(df, gender, impact_personal_relations, "Impact on personal relations")
+tbl_one_var_cont(
+  df,
+  gender,
+  impact_personal_relations,
+  "Impact on personal relations"
+)
 ```
 
 \newpage
@@ -1602,7 +1345,12 @@ tbl_sv(df, gender, impact_personal_relations, "Impact on personal relations")
 ```{r, tab.id="tbl-impact-personal-relations-age"}
 #| tab.cap = "Impact on personal relations by age"
 
-tbl_sv(df, age, impact_personal_relations, "Impact on personal relations")
+tbl_one_var_cont(
+  df,
+  age,
+  impact_personal_relations,
+  "Impact on personal relations"
+)
 ```
 
 \newpage
@@ -1610,7 +1358,12 @@ tbl_sv(df, age, impact_personal_relations, "Impact on personal relations")
 ```{r, tab.id="tbl-impact-personal-relations-education"}
 #| tab.cap = "Impact on personal relations by education"
 
-tbl_sv(df, education, impact_personal_relations, "Impact on personal relations")
+tbl_one_var_cont(
+  df,
+  education,
+  impact_personal_relations,
+  "Impact on personal relations"
+)
 ```
 
 \newpage
@@ -1618,7 +1371,12 @@ tbl_sv(df, education, impact_personal_relations, "Impact on personal relations")
 ```{r, tab.id="tbl-impact-personal-relations-finance"}
 #| tab.cap = "Impact on personal relations by financial situation"
 
-tbl_sv(df, finance, impact_personal_relations, "Impact on personal relations")
+tbl_one_var_cont(
+  df,
+  finance,
+  impact_personal_relations,
+  "Impact on personal relations"
+)
 ```
 
 \newpage
@@ -1628,7 +1386,7 @@ tbl_sv(df, finance, impact_personal_relations, "Impact on personal relations")
 ```{r, tab.id="tbl-impact-education-gender"}
 #| tab.cap = "Impact on education by gender"
 
-tbl_sv(df, gender, impact_education, "Impact on education")
+tbl_one_var_cont(df, gender, impact_education, "Impact on education")
 ```
 
 \newpage
@@ -1636,7 +1394,7 @@ tbl_sv(df, gender, impact_education, "Impact on education")
 ```{r, tab.id="tbl-impact-education-age"}
 #| tab.cap = "Impact on education by age"
 
-tbl_sv(df, age, impact_education, "Impact on education")
+tbl_one_var_cont(df, age, impact_education, "Impact on education")
 ```
 
 \newpage
@@ -1644,7 +1402,7 @@ tbl_sv(df, age, impact_education, "Impact on education")
 ```{r, tab.id="tbl-impact-education-education"}
 #| tab.cap = "Impact on education by education"
 
-tbl_sv(df, education, impact_education, "Impact on education")
+tbl_one_var_cont(df, education, impact_education, "Impact on education")
 ```
 
 \newpage
@@ -1652,7 +1410,7 @@ tbl_sv(df, education, impact_education, "Impact on education")
 ```{r, tab.id="tbl-impact-education-finance"}
 #| tab.cap = "Impact on education by financial situation"
 
-tbl_sv(df, finance, impact_education, "Impact on education")
+tbl_one_var_cont(df, finance, impact_education, "Impact on education")
 ```
 
 \newpage
@@ -1663,6 +1421,8 @@ tbl_sv(df, finance, impact_education, "Impact on education")
 
 ```{r, tab.id="tbl-impact-work-time-since-diag"}
 #| tab.cap = "Impact on work intensity by time since diagnosis"
+
+tbl_one_var_categ(df, time_since_diag, impact_work, "Impact on work intensity")
 
 tbl_summary(
   df,
@@ -1683,18 +1443,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-work-living-situation"}
 #| tab.cap = "Impact on work intensity by living situation"
 
-tbl_summary(
-  df,
-  by = living_situation,
-  include = impact_work,
-  label = list(impact_work = "Impact on work intensity"),
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Living situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, living_situation, impact_work, "Impact on work intensity")
 ```
 
 \newpage
@@ -1702,18 +1451,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-work-gender"}
 #| tab.cap = "Impact on work intensity by gender"
 
-tbl_summary(
-  df,
-  by = gender,
-  include = impact_work,
-  label = list(impact_work = "Impact on work intensity"),
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, gender, impact_work, "Impact on work intensity")
 ```
 
 \newpage
@@ -1721,18 +1459,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-work-education"}
 #| tab.cap = "Impact on work intensity by education"
 
-tbl_summary(
-  df,
-  by = education,
-  include = impact_work,
-  label = list(impact_work = "Impact on work intensity"),
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, education, impact_work, "Impact on work intensity")
 ```
 
 \newpage
@@ -1740,18 +1467,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-work-finance"}
 #| tab.cap = "Impact on work intensity by financial situation"
 
-tbl_summary(
-  df,
-  by = finance,
-  include = impact_work,
-  label = list(impact_work = "Impact on work intensity"),
-  missing_text = "Missing"
-) |>
-  add_p() |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, finance, impact_work, "Impact on work intensity")
 ```
 
 \newpage
@@ -1761,21 +1477,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-time-work-time-since-diag"}
 #| tab.cap = "Impact on work intensity by time since diagnosis"
 
-tbl_summary(
-  df,
-  by = time_since_diag,
-  include = time_not_working,
-  label = list(time_not_working = "Time not working"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_not_working ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, time_since_diag, time_not_working, "Time not working")
 ```
 
 \newpage
@@ -1783,21 +1485,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-time-work-living-situation"}
 #| tab.cap = "Impact on work intensity by living situation"
 
-tbl_summary(
-  df,
-  by = living_situation,
-  include = time_not_working,
-  label = list(time_not_working = "Time not working"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_not_working ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Living situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, living_situation, time_not_working, "Time not working")
 ```
 
 \newpage
@@ -1805,21 +1493,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-time-work-gender"}
 #| tab.cap = "Impact on work intensity by gender"
 
-tbl_summary(
-  df,
-  by = gender,
-  include = time_not_working,
-  label = list(time_not_working = "Time not working"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_not_working ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, gender, time_not_working, "Time not working")
 ```
 
 \newpage
@@ -1827,21 +1501,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-time-work-education"}
 #| tab.cap = "Impact on work intensity by education"
 
-tbl_summary(
-  df,
-  by = education,
-  include = time_not_working,
-  label = list(time_not_working = "Time not working"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_not_working ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, education, time_not_working, "Time not working")
 ```
 
 \newpage
@@ -1849,21 +1509,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-time-work-finance"}
 #| tab.cap = "Impact on work intensity by financial situation"
 
-tbl_summary(
-  df,
-  by = finance,
-  include = time_not_working,
-  label = list(time_not_working = "Time not working"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = time_not_working ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_one_var_categ(df, finance, time_not_working, "Time not working")
 ```
 
 ## Financial consequences
@@ -1871,7 +1517,7 @@ tbl_summary(
 ```{r, tab.id="tbl-impact-financial-living-situation"}
 #| tab.cap = "Impact on financial situation by living situation"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   living_situation,
   impact_financial_situation,
@@ -1884,7 +1530,7 @@ tbl_sv(
 ```{r, tab.id="tbl-impact-financial-time-since-diag"}
 #| tab.cap = "Impact on financial situation by time since diagnosis"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   time_since_diag,
   impact_financial_situation,
@@ -1897,7 +1543,7 @@ tbl_sv(
 ```{r, tab.id="tbl-impact-financial-age"}
 #| tab.cap = "Impact on financial situation by age"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   age,
   impact_financial_situation,
@@ -1910,7 +1556,7 @@ tbl_sv(
 ```{r, tab.id="tbl-impact-financial-gender"}
 #| tab.cap = "Impact on financial situation by gender"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   gender,
   impact_financial_situation,
@@ -1923,7 +1569,7 @@ tbl_sv(
 ```{r, tab.id="tbl-impact-financial-education"}
 #| tab.cap = "Impact on financial situation by education"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   education,
   impact_financial_situation,
@@ -1936,7 +1582,7 @@ tbl_sv(
 ```{r, tab.id="tbl-impact-financial-finance"}
 #| tab.cap = "Impact on financial situation by financial situation"
 
-tbl_sv(
+tbl_one_var_cont(
   df,
   finance,
   impact_financial_situation,
@@ -1947,153 +1593,55 @@ tbl_sv(
 # Priotity rating of need categories (P1)
 
 ```{r, tab.id="tbl-priority-time-since-diag"}
-#| tab.cap = "Impact on work intensity by time since diagnosis"
+#| tab.cap = "Priority ratings by time since diagnosis"
 
-tbl_summary(
-  df,
-  by = time_since_diag,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Time since diagnosis**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, time_since_diag, "P1")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-priority-living-situation"}
-#| tab.cap = "Impact on work intensity by living situation"
+#| tab.cap = "Priority ratings by living situation"
 
-tbl_summary(
-  df,
-  by = living_situation,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Living situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, living_situation, "P1")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-priority-gender"}
-#| tab.cap = "Impact on work intensity by gender"
+#| tab.cap = "Priority ratings by gender"
 
-tbl_summary(
-  df,
-  by = gender,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Gender**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, gender, "P1")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-priority-education"}
-#| tab.cap = "Impact on work intensity by education"
+#| tab.cap = "Priority ratings by education"
 
-tbl_summary(
-  df,
-  by = education,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Education level**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, education, "P1")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-priority-finance"}
-#| tab.cap = "Impact on work intensity by financial situation"
+#| tab.cap = "Priority ratings by financial situation"
 
-tbl_summary(
-  df,
-  by = finance,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Financial situation**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, finance, "P1")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-priority-region"}
-#| tab.cap = "Impact on work intensity by geographical region"
+#| tab.cap = "Priority ratings by geographical region"
 
-tbl_summary(
-  df,
-  by = region,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Geographical region**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, region, "P1")
 ```
 
 \newpage
 
 ```{r, tab.id="tbl-priority-age"}
-#| tab.cap = "Impact on work intensity by age"
+#| tab.cap = "Priority ratings by age"
 
-tbl_summary(
-  df,
-  by = age,
-  include = priority,
-  label = list(priority = "Priority rating"),
-  missing_text = "Missing"
-) |>
-  add_p(
-    test = priority ~ "fisher.test",
-    test.args = all_tests("fisher.test") ~ list(simulate.p.value = TRUE)
-  ) |>
-  modify_spanning_header(all_stat_cols() ~ "**Age (years)**") |>
-  as_flex_table() |>
-  width(j = 1, width = 5, unit = "cm") |>
-  width(j = -1, width = 3, unit = "cm")
+tbl_mult_var_cont(df, age, "P1")
 ```

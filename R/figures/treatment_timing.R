@@ -90,8 +90,7 @@ df_symp <- df |>
           "> 2 years"
         )
       )
-  ) |>
-  filter(!is.na(answer))
+  )
 
 # Join with the diagnosis data to keep only included respondents
 df_sub <- df_sub |>
