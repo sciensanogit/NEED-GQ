@@ -24,6 +24,9 @@ data <- read.csv(
   fileEncoding = "UTF-8-BOM"
 )
 
+# Remove the fields containing sensitive information
+data <- data[, 1:247]
+
 
 # Redefine names and value labels ------------------------------------------------
 
@@ -3526,30 +3529,30 @@ attributes(data)$variable.labels[
 ] <- "We would like to know more about the needs and difficulties you experience or have experienced in the context of your psychotic disorder. If you wish, you can take part in an individual interview (online or face-to-face with a researcher) to discuss your experiences and needs in more detail. This interview will be conducted confidentially and independently of the care you receive from healthcare providers. We plan to interview 24 patients. This individual interview will last about an hour and a half. Would you like to take part in an individual interview?"
 data[, 247] <- factor(data[, 247], levels = c(1, 2), labels = c("Yes", "No"))
 names(data)[247] <- "Follow"
-# LimeSurvey Field type: A
-data[, 248] <- as.character(data[, 248])
-attributes(data)$variable.labels[
-  248
-] <- "[Email address] If you are interested in the individual interview, please provide your contact details (phone number and email address) so that we can contact you."
-names(data)[248] <- "NOM_Email"
-# LimeSurvey Field type: A
-data[, 249] <- as.character(data[, 249])
-attributes(data)$variable.labels[
-  249
-] <- "[Confirm email address] If you are interested in the individual interview, please provide your contact details (phone number and email address) so that we can contact you."
-names(data)[249] <- "NOM_Cemail"
-# LimeSurvey Field type: A
-data[, 250] <- as.character(data[, 250])
-attributes(data)$variable.labels[
-  250
-] <- "[Mobile phone number] If you are interested in the individual interview, please provide your contact details (phone number and email address) so that we can contact you."
-names(data)[250] <- "NOM_GSM1"
-# LimeSurvey Field type: A
-data[, 251] <- as.character(data[, 251])
-attributes(data)$variable.labels[
-  251
-] <- "Thank you very much for your cooperation! A member of the research team will contact you within a few weeks to inform you about your possible participation in an interview."
-names(data)[251] <- "TXS"
+# # LimeSurvey Field type: A
+# data[, 248] <- as.character(data[, 248])
+# attributes(data)$variable.labels[
+#   248
+# ] <- "[Email address] If you are interested in the individual interview, please provide your contact details (phone number and email address) so that we can contact you."
+# names(data)[248] <- "NOM_Email"
+# # LimeSurvey Field type: A
+# data[, 249] <- as.character(data[, 249])
+# attributes(data)$variable.labels[
+#   249
+# ] <- "[Confirm email address] If you are interested in the individual interview, please provide your contact details (phone number and email address) so that we can contact you."
+# names(data)[249] <- "NOM_Cemail"
+# # LimeSurvey Field type: A
+# data[, 250] <- as.character(data[, 250])
+# attributes(data)$variable.labels[
+#   250
+# ] <- "[Mobile phone number] If you are interested in the individual interview, please provide your contact details (phone number and email address) so that we can contact you."
+# names(data)[250] <- "NOM_GSM1"
+# # LimeSurvey Field type: A
+# data[, 251] <- as.character(data[, 251])
+# attributes(data)$variable.labels[
+#   251
+# ] <- "Thank you very much for your cooperation! A member of the research team will contact you within a few weeks to inform you about your possible participation in an interview."
+# names(data)[251] <- "TXS"
 
 # Extract variable labels --------------------------------------------------------
 
