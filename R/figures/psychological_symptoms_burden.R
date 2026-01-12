@@ -13,6 +13,7 @@
 library(tidyverse)
 library(glue)
 library(labelled)
+library(flextable)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)
@@ -56,7 +57,8 @@ df_long <- df |>
   mutate(
     n_ordering = sum(as.numeric(response) %in% c(5, 6)),
     .by = c(label)
-  )
+  ) |>
+  filter(response != "I don't know")
 
 # Save the processed data
 df_long |>
@@ -83,6 +85,8 @@ caption <- glue(
 
 # Create a data set with the total number of responses per symptom
 totals_df <- count(df_long, label, n_ordering) |>
+  filter(label != "Other" & label != "Fatigue or exhaustion") |>
+  mutate(label = fct_drop(label)) |>
   mutate(
     response = NA,
     perc = round(100 * n / n_total, 1),
@@ -92,13 +96,15 @@ totals_df <- count(df_long, label, n_ordering) |>
 
 
 (fig <- df_long |>
+  filter(label != "Other" & label != "Fatigue or exhaustion") |>
+  mutate(label = fct_drop(label)) |>
   count(label, n_ordering, response) |>
   mutate(total = sum(n), .by = label) |>
   mutate(
     perc = round(100 * n / n_total, 1),
     txt_label = glue::glue("{n} ({perc}%)")
   ) |>
-  ggplot(aes(x = n, y = reorder(label, n_ordering), fill = response)) +
+  ggplot(aes(x = n, y = reorder(label, perc), fill = response)) +
   geom_col(position = "stack") +
   geom_text(data = totals_df, aes(label = txt_label), hjust = -0.25, size = 4) +
   scale_x_continuous(
@@ -132,6 +138,89 @@ totals_df <- count(df_long, label, n_ordering) |>
   ) +
   guides(fill = guide_legend(nrow = 3)))
 
+
+# Create a separate figure for fatigue
+
+totals_df_fatigue <- count(df_long, label, n_ordering) |>
+  filter(label == "Fatigue or exhaustion") |>
+  mutate(label = fct_drop(label)) |>
+  mutate(
+    response = NA,
+    perc = round(100 * n / n_total, 1),
+    txt_label = glue::glue("{n} ({perc}%)"),
+    total = n
+  )
+
+(fig_fatigue <- df_long |>
+    filter(label == "Fatigue or exhaustion") |>
+    mutate(label = fct_drop(label)) |>
+    count(label, n_ordering, response) |>
+    mutate(total = sum(n), .by = label) |>
+    mutate(
+      perc = round(100 * n / n_total, 1),
+      txt_label = glue::glue("{n} ({perc}%)")
+    ) |>
+    ggplot(aes(x = n, y = reorder(label, perc), fill = response)) +
+    geom_col(position = "stack") +
+    geom_text(data = totals_df_fatigue, aes(label = txt_label), hjust = -0.25, size = 4) +
+    scale_x_continuous(
+      breaks = scales::breaks_width(width = 10),
+      expand = expansion(mult = c(0, 0.3))
+    ) +
+    scale_fill_manual(
+      name = NULL,
+      values = c(
+        "I don't know" = "#B0BEC5",
+        "Not at all bothersome" = "#2196F3",
+        "Slightly bothersome" = "#4CAF50",
+        "Moderately bothersome" = "#FFC107",
+        "Very bothersome" = "#FF9800",
+        "Extremely bothersome" = "#F44336"
+      ),
+      na.translate = FALSE
+    ) +
+    scale_y_discrete(
+      labels = function(x) str_wrap(x, width = 60) # Wrap long labels
+    ) +
+    labs(
+      y = "",
+      x = "Number of responses",
+      title = caption |> str_wrap(50)
+    ) +
+    theme_kce(font_size = 10) +
+    theme(
+      panel.grid.major.x = element_line(colour = "lightgray"),
+      legend.position = "bottom"
+    ) +
+    guides(fill = guide_legend(nrow = 2)))
+
+# Create the corresponding table ------------------------------------------
+
+tab <- df_long |>
+  filter(label != "Other") |>
+  mutate(label = fct_drop(label)) |>
+  count(label, n_ordering, response) |>
+  mutate(total = sum(n), .by = label) |>
+  select(response, n, label) |>
+  pivot_wider(names_from = "response", values_from = "n", values_fill = 0) |>
+  rename("Symptom" = label) |>
+  flextable() |>
+  add_header_row(
+    values = c("Symptom", "Response"),
+    colwidths = c(1, 5),
+  ) |>
+  align(align = "center", part = "header") |>
+  merge_v(part = "header") |>
+  set_caption(
+    caption = "Table: Frequency and level of burden of psychological symptoms reported by respondents."
+  )
+
+# Export the table
+flextable::save_as_docx(
+  tab,
+  path = "results/tables/psychological_symptoms_burden.docx"
+)
+
 # Export it ---------------------------------------------------------------
 
 # Save to png
@@ -149,5 +238,23 @@ create_pptx(
   width = 8,
   height = 10,
   path = "results/figures/pptx/psychological_symptoms_burden.pptx",
+  overwrite = TRUE
+)
+
+# Save to png
+ggsave(
+  filename = "results/figures/png/psychological_symptoms_burden_FATIGUE.png",
+  plot = fig_fatigue,
+  width = 7,
+  height = 2,
+  dpi = 300
+)
+
+# Save to powerpoint
+create_pptx(
+  ggobj = fig_fatigue,
+  width = 7,
+  height = 2,
+  path = "results/figures/pptx/psychological_symptoms_burden_FATIGUE.pptx",
   overwrite = TRUE
 )

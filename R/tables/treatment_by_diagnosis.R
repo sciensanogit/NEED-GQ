@@ -28,7 +28,7 @@ data <- readRDS("data/processed/data_current.rds")
 trt <- data |>
   filter(included == 1L) |>
   select(id, matches("HC3_SQ.+")) |>
-  mutate(across(-id, ~ remove_val_labels(.x) - 1))
+  mutate(across(-id, ~ remove_val_labels(.x) %% 2))
 trt_long <- trt |>
   pivot_longer(-id, names_to = "treatment", values_to = "value") |>
   mutate(value = if_else(value == 1, 1, 0))
@@ -37,7 +37,7 @@ trt_long <- trt |>
 diag <- data |>
   filter(included == 1L) |>
   select(id, starts_with("DSD1_A")) |>
-  mutate(across(-id, ~ remove_val_labels(.x) - 1))
+  mutate(across(-id, ~ remove_val_labels(.x) %% 2))
 diag_long <- diag |>
   pivot_longer(-id, names_to = "diagnosis", values_to = "value") |>
   mutate(value = if_else(value == 1, 1, 0))

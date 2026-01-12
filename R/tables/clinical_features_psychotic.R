@@ -27,7 +27,12 @@ data <- read_rds("data/processed/data_current.rds")
 df <- data |>
   filter(included == 1L) |>
   select(id, matches("HC13_SQ.+")) |>
-  mutate(across(-id, ~ labelled::remove_val_labels(.x) - 1))
+  mutate(
+    across(
+      -id,
+      ~ labelled::remove_val_labels(.x) %% 2 |> factor(levels = c(0, 1))
+    )
+  )
 
 # Get variable labels into a list for the flextable
 labels <- get_labels(df, -id)
@@ -43,7 +48,8 @@ tbl <- tbl_summary(
   label = lbl_list,
   missing_text = "Missing",
   type = everything() ~ "dichotomous",
-  value = everything() ~ "1"
+  value = everything() ~ "1",
+  statistic = everything() ~ "[{N_nonmiss}] {n} ({p}%)"
 ) |>
   as_flex_table()
 

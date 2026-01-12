@@ -90,7 +90,8 @@ df_symp <- df |>
           "> 2 years"
         )
       )
-  )
+  ) |>
+  filter(!c(answer %in% c("I don't know", "Not applicable")))
 
 # Join with the diagnosis data to keep only included respondents
 df_sub <- df_sub |>
@@ -124,7 +125,8 @@ df_hc <- df |>
         )
       )
   ) |>
-  filter(!is.na(answer))
+  filter(!is.na(answer)) |>
+  filter(!c(answer %in% c("I don't know", "Not applicable")))
 
 # Join with the diagnosis data to keep only included respondents
 df_sub <- df_sub |>

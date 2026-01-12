@@ -71,38 +71,38 @@ df_long |>
 
 # Count the answers by variable
 df_count <- df_long |>
+  filter(answer != "I don't know") |>
   count(label, answer) |>
   group_by(label) |>
   mutate(
     total = sum(n),
     perc = n / total,
     perc_label = scales::percent(perc, accuracy = 1),
-    text = glue("{n} ({perc_label})")
+    text = glue("{n}\n({perc_label})")
+  ) |>
+  mutate(
+    answer = fct_rev(answer),
+    label = glue::glue("{label} (N={total})")
   )
 
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Experience with the organization of care and the recurrence of the same healthcare personnel (N={unique(df_count$total)})"
+  "Experience with the organization of care and the recurrence of the same healthcare personnel"
 )
 
 # Create the figure --------------------------------------------------------
 
 fig <- df_count |>
-  mutate(label = str_wrap(label, width = 30)) |>
-  ggplot(aes(x = label, y = n, fill = answer)) +
-  geom_bar(position = position_stack(), stat = "identity") +
-  geom_text(
-    aes(label = text),
-    position = position_stack(vjust = 0.5),
-    size = 4
+  ggplot(aes(x = answer, y = n, fill = answer)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = text), vjust = -0.5, size = 4) +
+  scale_y_continuous(
+    name = "Number of respondents",
+    expand = expansion(mult = c(0, 0.3))
   ) +
-  labs(
-    title = str_wrap(caption, width = 35),
-    x = NULL,
-    y = NULL,
-    fill = "Answer"
-  ) +
+  labs(title = str_wrap(caption, 60), x = NULL) +
+  theme_kce() +
   scale_fill_manual(
     name = NULL,
     values = c(
@@ -114,17 +114,12 @@ fig <- df_count |>
       "Never" = "#F44336"
     )
   ) +
-  theme_kce() +
-  theme(
-    legend.position = "bottom",
-    axis.line = element_blank(),
-    axis.ticks = element_blank(),
-    axis.text.x = element_text(size = 10),
-    axis.text.y = element_blank(),
+  facet_wrap(
+    . ~ label,
+    labeller = labeller(label = function(x) str_wrap(x, width = 40))
   ) +
-  guides(
-    fill = guide_legend(title.position = "top", title.hjust = 0, nrow = 2)
-  )
+  theme(legend.position = "none") +
+  guides(fill = guide_legend(nrow = 4))
 
 # Export it ---------------------------------------------------------------
 
@@ -132,16 +127,16 @@ fig <- df_count |>
 ggsave(
   filename = "results/figures/png/care_organization_experience.png",
   plot = fig,
-  width = 6,
-  height = 8,
+  width = 8,
+  height = 6,
   dpi = 300
 )
 
 # Save to powerpoint
 create_pptx(
   ggobj = fig,
-  width = 6,
-  height = 8,
+  width = 8,
+  height = 6,
   path = "results/figures/pptx/care_organization_experience.pptx",
   overwrite = TRUE
 )

@@ -88,6 +88,7 @@ df |>
 # Define the count table for S2
 df_s2 <- df |>
   filter(!is.na(S2)) |>
+  filter(S2 != "I don't know") |>
   count(S2) |>
   add_count(name = "total", wt = n) |>
   mutate(
@@ -99,6 +100,7 @@ df_s2 <- df |>
 # Define the count table for S3
 df_s3 <- df |>
   filter(!is.na(answer)) |>
+  filter(answer != "I don't know") |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
   mutate(

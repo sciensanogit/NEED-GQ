@@ -12,6 +12,7 @@
 library(tidyverse)
 library(glue)
 library(labelled)
+library(flextable)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)
@@ -59,7 +60,9 @@ df_long <- df |>
   mutate(
     n_ordering = sum(as.numeric(answer) %in% c(5, 6)),
     .by = c(label)
-  )
+  ) |>
+  filter(answer != "I don't know") |>
+  mutate(answer = fct_drop(answer))
 
 # Save the long data for later us
 df_long |>
@@ -120,6 +123,27 @@ fig <- df_count |>
     legend.position = "bottom"
   ) +
   guides(fill = guide_legend(nrow = 2))
+
+# Create the corresponding table ------------------------------------------
+
+tab <- df_count |>
+  select(response = answer, n, label) |> 
+  pivot_wider(names_from = "response", values_from = "n", values_fill = 0) |>
+  rename("Need category" = label) |>
+  flextable() |>
+  add_header_row(
+    values = c("Need category", "Priority rating"),
+    colwidths = c(1, 5),
+  ) |>
+  align(align = "center", part = "header") |>
+  merge_v(part = "header") |>
+  set_caption(caption = "Table: Priority rating of need categories.")
+
+# Export the table
+flextable::save_as_docx(
+  tab,
+  path = "results/tables/priority_need_categories.docx"
+)
 
 # Export it ---------------------------------------------------------------
 

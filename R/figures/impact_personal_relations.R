@@ -22,7 +22,8 @@ walk(list.files("R/functions", full.names = TRUE), source)
 data <- readRDS("data/processed/data_current.rds")
 
 # Subset and modify the data
-df_long <- pivot_impact_data(data, var = "S6")
+df_long <- pivot_impact_data(data, var = "S6") |> 
+  filter(answer != "I don't know") 
 
 # Save the intermediate data
 df_long |>
@@ -30,7 +31,7 @@ df_long |>
   saveRDS("data/processed/subdata/impact_personal_relations.rds")
 
 # Summarize the number of respondents per answer
-df <- summarize_impact_data(df_long)
+df <- summarize_impact_data(df_long) 
 
 # Define caption -----------------------------------------------------------------
 

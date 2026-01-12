@@ -57,14 +57,22 @@ df_long <- df |>
         "A lot",
         "Extremely"
       )
+    ),
+    answer_num = case_match(
+      answer,
+      "I don't know" ~ NA_real_, # Used to be 0
+      "Not at all" ~ 1,
+      "Slightly" ~ 2,
+      "Moderately" ~ 3,
+      "A lot" ~ 4,
+      "Extremely" ~ 5,
+      .default = NA_real_
     )
   )
 
 # Save subdata to file
 df_long |>
   mutate(
-    answer_num = as.numeric(answer) - 2,
-    answer_num = ifelse(answer_num < 0, NA, answer_num),
     question = case_match(
       question,
       "Sexual life" ~ "sexual_health",
@@ -80,7 +88,7 @@ df_long |>
 
 # Make into a count table
 df_count <- df_long |>
-  filter(!is.na(answer)) |>
+  filter(!is.na(answer_num)) |>
   count(question, answer) |>
   group_by(question) |>
   add_count(name = "total", wt = n) |>
@@ -98,9 +106,39 @@ caption <- glue(
   "Impact of psychotic disorder on the sexual and reproductive health"
 )
 
+create_caption_missing <- function(question) {
+  non_sel_answers <- c(
+    "I don't know",
+    "Not applicable",
+    "I don't want to answer",
+    NA
+  )
+  nums <- df_long |>
+    filter(answer %in% non_sel_answers) |>
+    count(question, answer) |>
+    mutate(
+      answer = ifelse(is.na(answer), "Did not answer", as.character(answer))
+    ) |>
+    filter(question == .env$question) |>
+    glue_data("{answer} (n={n})") |>
+    str_c(collapse = "; ")
+  paste0(question, ": ", nums)
+}
+
+note <- paste0(
+  create_caption_missing("Sexual life"),
+  "\n",
+  create_caption_missing("Reproductive life")
+)
+
 # Create the figure --------------------------------------------------------
 
 (fig <- df_count |>
+  filter(
+    !c(
+      answer %in% c("I don't know", "Not applicable", "I don't want to answer")
+    )
+  ) |>
   ggplot(aes(x = answer, y = n, fill = answer)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), vjust = -0.5, size = 4) +
@@ -109,7 +147,8 @@ caption <- glue(
   labs(
     title = caption,
     x = "",
-    y = "Number of respondents"
+    y = "Number of respondents",
+    caption = note
   ) +
   theme_kce(font_size = 16) +
   scale_fill_manual(
@@ -128,6 +167,7 @@ caption <- glue(
   theme(
     legend.position = "none",
     axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.caption = element_text(size = 10),
     panel.grid.major.y = element_line(linewidth = 0.1, color = "grey80")
   ))
 

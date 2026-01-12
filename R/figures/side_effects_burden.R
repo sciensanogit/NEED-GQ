@@ -11,6 +11,7 @@
 library(tidyverse)
 library(glue)
 library(labelled)
+library(flextable)
 
 # Load the functions
 walk(list.files("R/functions", full.names = TRUE), source)
@@ -56,16 +57,21 @@ df_long <- df |>
         "Very burdensome",
         "Extremely burdensome"
       )
+    ),
+    response_num = case_match(
+      response,
+      "I don't know" ~ NA_real_,
+      "Not at all burdensome" ~ 1,
+      "Slightly burdensome" ~ 2,
+      "Moderately burdensome" ~ 3,
+      "Very burdensome" ~ 4,
+      "Extremely burdensome" ~ 5
     )
   ) |>
   left_join(labels, by = "variable")
 
 # Turn answers to numeric and pivot to wide. Then, save the dataset
 df_long |>
-  mutate(
-    response_num = as.numeric(response) - 1,
-    response_num = ifelse(response_num < 1, NA, response_num) # Treat "I don't know" as missing
-  ) |>
   select(id, variable, response_num) |>
   pivot_wider(names_from = variable, values_from = response_num) |>
   set_variable_labels(
@@ -74,7 +80,8 @@ df_long |>
   saveRDS("data/processed/subdata/physical_symptoms_burden.rds")
 
 # Count the number of responses per symptom and level of burden
-df_long <- df_long |>
+df_count <- df_long |>
+  filter(response != "I don't know") |>
   count(response, label) |>
   mutate(total = sum(n), .by = label)
 
@@ -89,7 +96,7 @@ caption <- glue(
 # Create the figure --------------------------------------------------------
 
 # Create a data set with the total number of responses per symptom
-totals_df <- df_long |>
+totals_df <- df_count |>
   distinct(total, label) |>
   mutate(
     n = total,
@@ -98,7 +105,7 @@ totals_df <- df_long |>
     txt_label = glue::glue("{n} ({perc}%)")
   )
 
-fig <- df_long |>
+fig <- df_count |>
   ggplot(aes(x = n, y = reorder(label, total), fill = response)) +
   geom_col(position = "stack") +
   geom_text(data = totals_df, aes(label = txt_label), hjust = -0.25, size = 4) +
@@ -132,6 +139,29 @@ fig <- df_long |>
     legend.position = "bottom"
   ) +
   guides(fill = guide_legend(nrow = 2))
+
+# Create the corresponding table ------------------------------------------
+
+tab <- df_count |>
+  select(response, n, label) |>
+  pivot_wider(names_from = "response", values_from = "n", values_fill = 0) |>
+  rename("Symptom" = label) |>
+  flextable() |>
+  add_header_row(
+    values = c("Symptom", "Response"),
+    colwidths = c(1, 5),
+  ) |>
+  align(align = "center", part = "header") |>
+  merge_v(part = "header") |>
+  set_caption(
+    caption = "Table: Distribution of reported side-effects by level of burden"
+  )
+
+# Export the table
+flextable::save_as_docx(
+  tab,
+  path = "results/tables/side_effects_burden.docx"
+)
 
 # Export it ---------------------------------------------------------------
 

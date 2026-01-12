@@ -24,7 +24,10 @@ data <- readRDS("data/processed/data_current.rds")
 df <- data |>
   filter(included == 1L) |>
   select(id, H6, H12) |>
-  mutate(change = H12 - H6) |>
+  mutate(
+    across(c(H6, H12), ~ .x / 100),
+    change = H12 - H6
+  ) |>
   pivot_longer(
     cols = c(H6, H12),
     names_to = "timepoint",

@@ -10,6 +10,7 @@
 
 library(tidyverse)
 library(glue)
+library(labelled)
 
 # Load all functions
 purrr::walk(list.files("R/functions", full.names = TRUE), source)
@@ -22,7 +23,9 @@ data <- readRDS("data/processed/data_current.rds")
 df <- data |>
   filter(included == 1L) |>
   select(id, matches("S7_SQ*")) |>
-  filter(!if_all(matches("S7_SQ*"), is.na))
+  filter(!if_all(matches("S7_SQ*"), is.na)) |> 
+  labelled::remove_value_labels() |> 
+  select(-S7_SQ010) # Remove "I don't know" variable
 
 # Retrieve labels
 lbl_list <- map_chr(df[, -1], function(x) attr(x, "label")) |>
@@ -57,7 +60,7 @@ df_long <- df_long |>
   count(label) |>
   mutate(
     label = fct_reorder(label, n) |>
-      fct_relevel(unname(lbl_list[[11]]), after = 0) |> # Move "I don't know" to the first
+      # fct_relevel(unname(lbl_list[[11]]), after = 0) |> # Move "I don't know" to the first
       fct_relabel(~ str_wrap(., width = 40)), # Wrap long labels
     perc = n / sum(n),
     text_lab = glue("{n} ({scales::percent(perc, accuracy = 1)})")

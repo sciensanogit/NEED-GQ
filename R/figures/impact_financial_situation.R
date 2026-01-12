@@ -22,7 +22,8 @@ walk(list.files("R/functions", full.names = TRUE), source)
 data <- readRDS("data/processed/data_current.rds")
 
 # Subset and modify the data
-df_long <- pivot_impact_data(data, var = "S5")
+df_long <- pivot_impact_data(data, var = "S5") |>
+  filter(answer != "I don't know")
 
 # Save the intermediate data
 df_long |>

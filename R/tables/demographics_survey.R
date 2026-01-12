@@ -48,9 +48,9 @@ df <- data |>
     age = interval(as.Date(D3, format = "%Y"), today()) / years(1),
     age_group = cut(
       age,
-      breaks = c(-Inf, 24, 44, 64, 74, Inf),
+      breaks = c(-Inf, 30, 50, Inf),
       right = TRUE,
-      labels = c("18-24", "25-44", "45-64", "65-74", "75+")
+      labels = c("<30", "30-50", "50+")
     )
   ) |>
   labelled::set_variable_labels(

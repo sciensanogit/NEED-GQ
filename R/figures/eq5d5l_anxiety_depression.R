@@ -28,8 +28,9 @@ df_long <- pivot_eq5d5l_data(data, "H5", "H11")
 
 # Save the long data frame for future use
 df_long |>
-  filter(timepoint == "Today") |>
-  select(id, eq5d5l_anxiety_depression = value_num) |>
+  pivot_wider(id_cols = id, names_from = timepoint, values_from = value_num) |>
+  mutate(change = Today - `Before onset of first symptoms`) |>
+  select(id, eq5d5l_anxiety_depression = change) |>
   saveRDS("data/processed/subdata/eq5d5l_anxiety_depression.rds")
 
 # Define caption -----------------------------------------------------------------
@@ -42,6 +43,9 @@ caption <- glue(
 # Create the Sankey plot ---------------------------------------------------------
 
 fig_sankey <- plot_eq5d5l_sankey(data = df_long, caption = caption)
+
+# Create a table ----
+tab_sankey <- table_eq5d5l_sankey(data = df_long, caption = caption)
 
 # Export it ---------------------------------------------------------------
 
@@ -60,4 +64,10 @@ create_pptx(
   height = 7,
   path = "results/figures/pptx/eq5d5l_anxiety_depression_sankey.pptx",
   overwrite = TRUE
+)
+
+# Save table
+flextable::save_as_docx(
+  tab_sankey,
+  path = "results/tables/eq5d5l_anxiety_depression_sankey.docx"
 )

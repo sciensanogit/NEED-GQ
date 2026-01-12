@@ -28,6 +28,7 @@ df <- data |>
 
 # Pivot to long format and label the time points
 df_long <- df |>
+  mutate(across(c(H12, H6), ~ .x / 100)) |>
   mutate(change = H12 - H6) |>
   pivot_longer(
     cols = c(H6, H12),

@@ -24,7 +24,10 @@ data <- readRDS("data/processed/data_current.rds")
 
 # Subset respondents that finished the survey and impact questions and pivot to long
 # format and label the answers
-df_long <- pivot_impact_data(data, var = "S1")
+df_long <- pivot_impact_data(data, var = "S1") |>
+  filter(answer != "I don't know") |>
+  filter(answer != "Not applicable")
+
 
 # Save the intermediate data
 df_long |>

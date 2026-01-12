@@ -29,8 +29,9 @@ df_long <- pivot_eq5d5l_data(data, "H1", "H7")
 
 # Save the long data frame for future use
 df_long |>
-  filter(timepoint == "Today") |>
-  select(id, eq5_mobility = value_num) |>
+  pivot_wider(id_cols = id, names_from = timepoint, values_from = value_num) |>
+  mutate(change = Today - `Before onset of first symptoms`) |>
+  select(id, eq5_mobility = change) |>
   saveRDS("data/processed/subdata/eq5d5l_mobility.rds")
 
 # Define caption -----------------------------------------------------------------
@@ -42,6 +43,13 @@ caption <- glue(
 # Create the Sankey plot ---------------------------------------------------------
 
 fig_sankey <- plot_eq5d5l_sankey(data = df_long, caption = caption)
+
+# Create a table ----
+tab_sankey <- table_eq5d5l_sankey(data = df_long, caption = caption)
+flextable::save_as_docx(
+  tab_sankey,
+  path = "results/tables/eq5d5l_mobility_sankey.docx"
+)
 
 # Export it ---------------------------------------------------------------
 

@@ -43,7 +43,8 @@ df <- data |>
           20
         )
       )
-  )
+  ) |>
+  filter(!c(answer %in% c("I don't know", "Not applicable")))
 
 # Turn into numeric scale and save the data
 df |>

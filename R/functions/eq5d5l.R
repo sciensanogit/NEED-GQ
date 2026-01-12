@@ -117,5 +117,40 @@ pivot_eq5d5l_data <- function(data, col1, col2) {
       ),
       value_num = as.numeric(value) - 1, # Numeric version for statistical tests
       value_num = ifelse(value == 0, NA, value_num) # Replace 0 (I don't know) by NA
+    ) |>
+    filter(
+      sum(value == "I don't know") == 0,
+      .by = id
+    ) |>
+    mutate(
+      value = forcats::fct_rev(value)
     )
+}
+
+table_eq5d5l_sankey <- function(data, caption = NULL) {
+  data |>
+    count(timepoint, value) |>
+    group_by(timepoint) |>
+    add_tally(n, name = "total") |>
+    mutate(
+      perc = n / total,
+      label = glue::glue("{n} ({scales::percent(perc, accuracy = 0.1)})")
+    ) |>
+    ungroup() |>
+    select(timepoint, value, label) |>
+    pivot_wider(
+      names_from = timepoint,
+      values_from = label,
+      values_fill = "-"
+    ) |>
+    rename("Category" = value) |>
+    flextable() |>
+    add_header_row(
+      values = c("Category", "Time"),
+      colwidths = c(1, 2),
+    ) |>
+    align(align = "center", part = "header") |>
+    merge_v(part = "header") |>
+    set_caption(caption = caption) |>
+    width(j = 1:3, width = 3, unit = "cm")
 }

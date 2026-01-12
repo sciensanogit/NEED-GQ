@@ -38,20 +38,26 @@ df <- data |>
           "Rarely",
           "Never"
         )
-      )
+      ),
+    answer_num = case_match(
+      answer,
+      "I don't know" ~ NA_real_,
+      "Always" ~ 1,
+      "Often" ~ 2,
+      "Sometimes" ~ 3,
+      "Rarely" ~ 4,
+      "Never" ~ 5
+    )
   )
 
 # Turn into numeric scale and save the data
 df |>
-  mutate(
-    answer_num = as.numeric(answer) - 1,
-    answer_num = if_else(answer == "I don't know", NA_real_, answer_num)
-  ) |>
   select(id, hcp_information_satisfaction = answer_num) |>
   saveRDS("data/processed/subdata/hcp_information_satisfaction.rds")
 
 # Make into a count table
 df_count <- df |>
+  filter(answer != "I don't know") |>
   count(answer) |>
   add_count(name = "total", wt = n) |>
   mutate(
@@ -63,7 +69,7 @@ df_count <- df |>
 # Define caption -----------------------------------------------------------------
 
 caption <- glue(
-  "Participant satisfaction with information received from HCPs (N={nrow(df)})."
+  "Participant satisfaction with information received from HCPs (N={df_count$total[1]})."
 )
 
 # Create the figure --------------------------------------------------------
